@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. EL CLIENTE
+model Client {
+  id          String   @id @default(cuid())
+  
+  // --- IDENTIFICACIÓN OBLIGATORIA ---
+  firstName   String
+  lastName    String
+  
+  // Documento (Tipo y Número)
+  docType     String   @default("DNI") // DNI, LE, LC, PAS, CI, CF
+  dni         String?  @unique         // El número del documento
+  
+  // --- DATOS ADICIONALES (Opcionales) ---
+  cuit        String?  @unique         // CUIT/CUIL
+  gender      String?  // Sexo
+  birthDate   DateTime? // Fecha de nacimiento
+  birthPlace  String?   // Lugar de nacimiento
+  nationality String?   @default("Argentina")
+  occupation  String?   // Ocupación (reemplaza a job)
+  civilStatus String?
+  
+  // --- UBICACIÓN Y CONTACTO ---
+  address     String?   // Calle y altura
+  location    String?   // Ciudad (Lista de Santa Fe)
+  email       String?
+  phone       String?   // Teléfono principal
+  familyPhone String?   // Teléfono de urgencia/familiar
+
+  createdAt   DateTime @default(now())
+  cases       Case[]
+}
+
+// 2. EL EXPEDIENTE / CASO
+model Case {
+  id          String      @id @default(cuid())
+  code        String
+  caratula    String
+  juzgado     String
+  description String?
+  status      CaseStatus  @default(ACTIVE)
+  
+  clientId    String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  events      Event[]     // Agenda
+  movements   Movement[]  // Historial del Juicio
+  transactions Transaction[]
+  
+  createdAt   DateTime    @default(now())
+}
+
+// 3. LA AGENDA
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  date        DateTime
+  type        EventType
+  description String?
+  isDone      Boolean   @default(false)
+
+  caseId      String
+  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+// 4. HISTORIAL / MOVIMIENTOS (Este es el que vale ahora)
+model Movement {
+  id          String   @id @default(cuid())
+  title       String   // Ej: "Cédula recibida"
+  description String?  // Ej: "El juzgado pide..."
+  date        DateTime @default(now())
+  
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+// --- ENUMS ---
+
+enum CaseStatus {
+  ACTIVE
+  ARCHIVED
+  MEDIATION
+}
+
+enum EventType {
+  HEARING
+  DEADLINE
+  MEETING
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  amount      Float    // El monto (ej: 5000.50)
+  type        String   // "INCOME" (Entrada) o "EXPENSE" (Salida)
+  description String   // "Adelanto de gastos"
+  date        DateTime @default(now())
+
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
