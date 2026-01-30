@@ -120,6 +120,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* Usamos las variables bg-background y text-foreground */
+    /* Esto hace que tome automáticamente los colores definidos arriba (blanco o azul oscuro) */
+    @apply bg-background text-foreground; 
   }
 }

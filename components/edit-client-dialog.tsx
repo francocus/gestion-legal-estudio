@@ -153,7 +153,7 @@ export function EditClientDialog({ client }: Props) {
              </div>
           </div>
 
-          <Button type="submit" className="w-full">Guardar Cambios</Button>
+          <Button type="submit" className="w-full flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">Guardar Cambios</Button>
         </form>
       </DialogContent>
     </Dialog>

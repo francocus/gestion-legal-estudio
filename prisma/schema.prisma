@@ -47,6 +47,9 @@ model Case {
   juzgado     String
   description String?
   status      CaseStatus  @default(ACTIVE)
+  totalFee    Int?     @default(0)
+  driveLink   String?
+  area        String   @default("CIVIL")
   
   clientId    String
   client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -105,4 +108,15 @@ model Transaction {
 
   caseId      String
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+// 5. USUARIOS DEL SISTEMA (ABOGADOS)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Acá guardaremos la contraseña encriptada ($2b$10$...)
+  name      String?
+  role      String   @default("ADMIN") // Por si después querés empleados con menos permisos
+  
+  createdAt DateTime @default(now())
 }

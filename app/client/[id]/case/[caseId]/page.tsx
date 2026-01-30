@@ -1,3 +1,4 @@
+import { PdfButton } from "@/components/pdf-button";
 import { EditCaseDialog } from "@/components/edit-case-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { CreateTransactionDialog } from "@/components/create-transaction-dialog";
@@ -5,225 +6,343 @@ import { CreateEventDialog } from "@/components/create-event-dialog";
 import { CreateMovementDialog } from "@/components/create-movement-dialog";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { WhatsAppActions } from "@/components/whatsapp-actions";
 import Link from "next/link";
+// 👇 IMPORTACIÓN UNIFICADA DE ICONOS PROFESIONALES
+import { 
+  Gavel, 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  ClipboardList, 
+  Clock, 
+  CalendarDays,
+  AlertCircle,
+  ChevronLeft,
+  Mail,
+  MapPin,
+  FileText,
+  Users,
+  StickyNote
+} from "lucide-react";
 
-
-export const dynamic = "force-dynamic"; // ⚠️ Obligatorio para ver datos frescos
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{
-    id: string;      // ID del Cliente
-    caseId: string;  // ID del Juicio
+    id: string;
+    caseId: string;
   }>;
 }
 
 export default async function CasePage({ params }: PageProps) {
   const { id, caseId } = await params;
 
-  // Buscamos el juicio y sus movimientos ordenados por fecha (del más nuevo al más viejo)
+  // 1. BUSCAR DATOS EN BASE DE DATOS
   const legalCase = await db.case.findUnique({
     where: { id: caseId },
-    include: { 
+    include: {
+        client: true,
         events: {
-         orderBy: { date: 'asc' }, // Ordenar por fecha (lo más próximo primero)
-         where: { isDone: false }  // Solo traer lo pendiente
+         orderBy: { date: 'asc' },
+         where: { isDone: false }
       },
         movements: {
             orderBy: { date: 'desc' }
         },
-       transactions: { orderBy: { date: 'desc' } } 
+        transactions: { orderBy: { date: 'desc' } } 
     }
   });
 
   if (!legalCase) return notFound();
 
+  // 2. CÁLCULOS
+  const totalIncome = legalCase.transactions
+    .filter(t => t.type === 'INCOME')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpense = legalCase.transactions
+    .filter(t => t.type === 'EXPENSE')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const balance = totalIncome - totalExpense;
+
+  // 3. RENDERIZADO
   return (
-    <div className="p-10 max-w-5xl mx-auto space-y-6">
+    <div className="w-full p-6 space-y-6">
       
       {/* NAVEGACIÓN */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-        <Link href={`/client/${id}`} className="hover:text-black hover:underline">
-            ← Volver al Cliente
+      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+        <Link href={`/client/${id}`} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <ChevronLeft className="h-4 w-4" /> Volver al Cliente
         </Link>
-        <span>/</span>
-        <span className="font-semibold text-black">Expediente {legalCase.code}</span>
+        <span className="text-gray-300 dark:text-gray-700">/</span>
+        <span className="font-semibold text-slate-900 dark:text-slate-200">Expediente {legalCase.code}</span>
       </div>
 
-      {/* ENCABEZADO DEL JUICIO CON EDICIÓN */}
-      <div className="bg-white border rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
-            <div className="w-full">
-                <div className="flex justify-between items-start w-full">
-                    <h1 className="text-3xl font-bold text-gray-900 leading-tight">{legalCase.caratula}</h1>
-                    {/* Botón de Editar */}
-                    <EditCaseDialog legalCase={legalCase} />
+      {/* ENCABEZADO PRINCIPAL */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{legalCase.caratula}</h1>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-500 dark:text-slate-400 text-sm">
+                    <span className="flex items-center gap-1.5 font-medium">
+                        <Gavel className="h-4 w-4 text-blue-500" /> {legalCase.juzgado}
+                    </span>
+                    <span className="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+                    <span className="flex items-center gap-1.5 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-xs">
+                        Nº: {legalCase.code}
+                    </span>
                 </div>
-                <p className="text-gray-500 mt-2 flex items-center gap-2">
-                    🏛️ {legalCase.juzgado} 
-                    <span className="text-gray-300">|</span> 
-                     Expte Nº: {legalCase.code}
-                </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row md:flex-col items-end gap-2 w-full md:w-auto">
+                 <PdfButton 
+                    client={legalCase.client} 
+                    legalCase={legalCase} 
+                    stats={{ totalIncome, totalFee: legalCase.totalFee || 0, balance }}
+                 />
+                 <EditCaseDialog legalCase={legalCase} />
+                 {legalCase.driveLink && (
+                     <a 
+                        href={legalCase.driveLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
+                     >
+                        <FileText className="h-4 w-4" /> Abrir Expediente Digital ↗
+                     </a>
+                 )}
             </div>
         </div>
 
-        {/* Badge de Estado (Ahora se actualiza si lo cambiás) */}
-        <div className="flex items-center gap-2">
-             <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase border ${
-                legalCase.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                legalCase.status === 'MEDIATION' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                'bg-gray-100 text-gray-800 border-gray-200'
+        <div className="flex items-center gap-2 mt-6">
+             <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase border ${
+                legalCase.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900' :
+                legalCase.status === 'MEDIATION' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
+                'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
              }`}>
                 {legalCase.status === 'ACTIVE' ? 'En Trámite' : legalCase.status === 'MEDIATION' ? 'Mediación' : 'Archivado'}
              </span>
-        </div>
-      </div>
 
-      {/* SECCIÓN AGENDA (NUEVA) */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-3 bg-red-50 border border-red-100 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-red-800 font-bold flex items-center gap-2 text-lg">
-                    ⏰ Próximos Vencimientos
-                </h3>
-                <CreateEventDialog caseId={caseId} clientId={id} />
-            </div>
-
-            {legalCase.events.length === 0 ? (
-                <p className="text-sm text-red-400 italic">No hay vencimientos pendientes.</p>
-            ) : (
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-    {legalCase.events.map((evt) => (
-        <Card key={evt.id} className="border-l-4 border-l-red-500 shadow-sm bg-white relative group">
-            
-            {/* BOTÓN DE BORRAR (Flotando oculto) */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <DeleteButton 
-                    id={evt.id} 
-                    type="EVENT" 
-                    clientId={id} 
-                    caseId={caseId} 
-                />
-            </div>
-
-            <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-1">
-                    <span className="font-bold text-red-700 text-sm uppercase pr-6">
-                        {evt.type === 'DEADLINE' ? '⚡ Vencimiento' : evt.type === 'HEARING' ? '⚖️ Audiencia' : 'Reunión'}
-                    </span>
-                </div>
-                <h4 className="font-bold mb-1">{evt.title}</h4>
-                <div className="text-sm text-gray-600 mb-2">
-                    📅 {evt.date.toLocaleDateString()} <br/>
-                    🕒 {evt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} hs
-                </div>
-            </CardContent>
-        </Card>
-    ))}
-</div>
+             {legalCase.area && (
+                <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-1 rounded border dark:border-slate-700 uppercase">
+                    {legalCase.area}
+                </span>
             )}
         </div>
       </div>
 
-      {/* SECCIÓN FINANZAS */}
+      {/* AGENDA DEL EXPEDIENTE */}
+      <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+              <h3 className="text-red-800 dark:text-red-300 font-bold flex items-center gap-2 text-lg">
+                  <AlertCircle className="h-5 w-5" /> Próximos Vencimientos
+              </h3>
+              <CreateEventDialog caseId={caseId} clientId={id} />
+          </div>
+
+          {legalCase.events.length === 0 ? (
+              <p className="text-sm text-red-400 italic bg-white/50 dark:bg-black/20 p-4 rounded-lg border border-dashed border-red-200 dark:border-red-900/30 text-center">
+                No hay vencimientos pendientes para este caso.
+              </p>
+          ) : (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {legalCase.events.map((evt) => (
+                      <Card key={evt.id} className="border-l-4 border-l-red-500 shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 relative group">
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <DeleteButton id={evt.id} type="EVENT" clientId={id} caseId={caseId} />
+                          </div>
+                          <CardContent className="p-4">
+                              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1 block">
+                                  {evt.type === 'HEARING' ? '⚖️ Audiencia' : evt.type === 'DEADLINE' ? '⚡ Plazo' : '📅 Reunión'}
+                              </span>
+                              <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-2">{evt.title}</h4>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                                  <p className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3" /> {evt.date.toLocaleDateString()}</p>
+                                  <p className="flex items-center gap-1.5"><Clock className="h-3 w-3" /> {evt.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} hs</p>
+                              </div>
+                          </CardContent>
+                      </Card>
+                  ))}
+              </div>
+          )}
+      </div>
+
+      {/* FINANZAS Y CONTACTO */}
       <div className="grid md:grid-cols-2 gap-6">
         
-        {/* RESUMEN DE CAJA */}
-        <div className="bg-green-50 border border-green-100 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-green-800 font-bold text-lg">💰 Caja del Expediente</h3>
+        {/* CAJA / HONORARIOS */}
+        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-6 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-emerald-800 dark:text-emerald-300 font-bold text-lg flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" /> Honorarios y Pagos
+                </h3>
                 <CreateTransactionDialog caseId={caseId} clientId={id} />
             </div>
 
-            <div className="bg-white rounded-lg border shadow-sm p-0 overflow-hidden">
-    {legalCase.transactions.length === 0 ? (
-        <div className="p-4 text-center text-gray-400 text-sm">No hay movimientos de dinero.</div>
-    ) : (
-        <table className="w-full text-sm">
-            <tbody>
-                {legalCase.transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b last:border-0 hover:bg-gray-50 group">
-                        <td className="p-3 text-gray-600">{tx.description}</td>
-                        <td className={`p-3 text-right font-bold ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                            {tx.type === 'INCOME' ? '+' : '-'} ${tx.amount}
-                        </td>
-                        
-                        {/* CELDA DEL BOTÓN DE BORRAR (Aparece al pasar el mouse) */}
-                        <td className="p-2 w-10 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                             <DeleteButton 
-                                id={tx.id} 
-                                type="TRANSACTION" 
-                                clientId={id} 
-                                caseId={caseId} 
-                             />
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    )}
-</div>
+            {legalCase.totalFee && legalCase.totalFee > 0 ? (
+                <div className="mb-6 bg-white dark:bg-slate-900 p-5 rounded-xl border border-emerald-100 dark:border-slate-800 shadow-sm">
+                    <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">Progreso de Cobro</span>
+                        <span className="font-bold text-emerald-600">
+                            {Math.round((totalIncome / legalCase.totalFee) * 100)}%
+                        </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 mb-4 overflow-hidden">
+                        <div 
+                            className="bg-emerald-500 h-full transition-all duration-700 ease-out" 
+                            style={{ width: `${Math.min((totalIncome / legalCase.totalFee) * 100, 100)}%` }}
+                        ></div>
+                    </div>
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abonado</p>
+                            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">$ {totalIncome.toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Saldo Pendiente</p>
+                            <p className={`text-xl font-bold ${balance >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-500'}`}>
+                                $ {(legalCase.totalFee - totalIncome).toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg text-center text-amber-700 dark:text-amber-400 text-sm italic">
+                    Sin honorarios pactados. Edite el caso para cargar el presupuesto.
+                </div>
+            )}
+
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-100 dark:border-slate-800 overflow-hidden">
+                {legalCase.transactions.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs italic">No hay movimientos de dinero.</div>
+                ) : (
+                    <div className="divide-y dark:divide-slate-800">
+                        {legalCase.transactions.map((tx) => (
+                            <div key={tx.id} className="p-3 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 group transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-1.5 rounded-full ${tx.type === 'INCOME' ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                                        {tx.type === 'INCOME' ? <TrendingUp className="h-3 w-3 text-emerald-600" /> : <TrendingDown className="h-3 w-3 text-red-600" />}
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{tx.description}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`text-sm font-bold font-mono ${tx.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                                        {tx.type === 'INCOME' ? '+' : '-'} ${tx.amount.toLocaleString()}
+                                    </span>
+                                    <DeleteButton id={tx.id} type="TRANSACTION" clientId={id} caseId={caseId} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
 
-        {/* ACÁ PODÉS DEJAR LA AGENDA SI QUERÉS QUE ESTÉN LADO A LADO, 
-            O SI LA AGENDA YA ESTÁ ARRIBA, ESTO QUEDA ABAJO. 
-            POR AHORA PROBALO ASÍ QUE SE VA A PONER DEBAJO DE LA AGENDA. */}
+        {/* FICHA CLIENTE Y NOTAS */}
+        <div className="space-y-6">
+            <Card className="dark:bg-slate-900 dark:border-slate-800 overflow-hidden shadow-sm">
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-800">
+                    <h3 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                        <Users className="h-3.5 w-3.5" /> Información de Contacto
+                    </h3>
+                </div>
+                <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">
+                            {legalCase.client.firstName[0]}{legalCase.client.lastName[0]}
+                        </div>
+                        <div>
+                            <p className="font-bold text-xl text-slate-900 dark:text-white">
+                                {legalCase.client.lastName}, {legalCase.client.firstName}
+                            </p>
+                            <p className="text-xs text-slate-500 font-mono">DNI: {legalCase.client.dni || "---"}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {legalCase.client.phone ? (
+                            <WhatsAppActions client={legalCase.client} legalCase={legalCase} />
+                        ) : (
+                            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-400 text-xs italic border border-dashed border-slate-200 dark:border-slate-700">
+                                Sin teléfono de contacto.
+                            </div>
+                        )}
+
+                        <div className="grid gap-3 text-sm border-t dark:border-slate-800 pt-4">
+                            {legalCase.client.email && (
+                                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg truncate">
+                                    <Mail className="h-4 w-4 text-blue-500 shrink-0" /> {legalCase.client.email}
+                                </div>
+                            )}
+                            {legalCase.client.address && (
+                                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg">
+                                    <MapPin className="h-4 w-4 text-red-500 shrink-0" /> {legalCase.client.address}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="bg-amber-50 dark:bg-slate-900 border border-amber-100 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+                 <h3 className="text-amber-800 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <StickyNote className="h-4 w-4 text-amber-500" /> Notas Internas
+                 </h3>
+                 {legalCase.description ? (
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                        {legalCase.description}
+                    </p>
+                 ) : (
+                    <p className="text-xs text-slate-400 italic">No hay observaciones cargadas.</p>
+                 )}
+            </div>
+        </div>
       </div>
 
-      {/* SECCIÓN DE MOVIMIENTOS */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-                📜 Historia del Expediente
+      {/* LÍNEA DE TIEMPO / MOVIMIENTOS */}
+      <div className="space-y-6 pt-4">
+        <div className="flex justify-between items-center border-b dark:border-slate-800 pb-4">
+            <h3 className="text-2xl font-bold flex items-center gap-3 text-slate-900 dark:text-white">
+                <ClipboardList className="h-6 w-6 text-blue-500" /> Historia del Caso
             </h3>
             <CreateMovementDialog caseId={caseId} clientId={id} />
         </div>
 
-        {/* LÍNEA DE TIEMPO */}
-        <div className="space-y-4 relative border-l-2 border-gray-200 ml-3 pl-6 pb-2">
-    
-    {legalCase.movements.length === 0 ? (
-        <div className="bg-gray-50 border border-dashed rounded-lg p-8 text-center text-gray-500">
-            <p>No hay movimientos cargados todavía.</p>
-            <p className="text-sm">Usá el botón para registrar la primera novedad.</p>
-        </div>
-    ) : (
-        legalCase.movements.map((mov) => (
-            <Card key={mov.id} className="relative mb-4 hover:shadow-md transition-shadow group">
-                
-                {/* BOTÓN DE BORRAR (Flotando oculto) */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <DeleteButton 
-                        id={mov.id} 
-                        type="MOVEMENT" 
-                        clientId={id} 
-                        caseId={caseId} 
-                    />
+        <div className="space-y-6 relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-8 pb-8">
+            {legalCase.movements.length === 0 ? (
+                <div className="bg-slate-50 dark:bg-slate-900/50 border border-dashed dark:border-slate-800 rounded-xl p-12 text-center text-slate-400">
+                    <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="font-medium italic">El historial está vacío. Cargue el primer movimiento judicial.</p>
                 </div>
-
-                {/* Puntito en la línea de tiempo */}
-                <div className="absolute -left-[33px] top-6 w-4 h-4 rounded-full bg-blue-500 border-4 border-white shadow-sm"></div>
-                
-                <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                        {/* pr-8 deja espacio para que el texto no toque el botón de borrar */}
-                        <h4 className="font-bold text-lg pr-8">{mov.title}</h4>
-                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                            {mov.date.toLocaleDateString()}
-                        </span>
+            ) : (
+                legalCase.movements.map((mov) => (
+                    <div key={mov.id} className="relative group">
+                        {/* El punto de la línea de tiempo */}
+                        <div className="absolute -left-[41px] top-6 w-5 h-5 rounded-full bg-blue-500 border-4 border-white dark:border-slate-950 shadow-md transition-transform group-hover:scale-125 z-10"></div>
+                        
+                        <Card className="hover:shadow-lg transition-all dark:bg-slate-900 dark:border-slate-800 overflow-hidden">
+                            <div className="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-5 py-3 border-b dark:border-slate-800">
+                                <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" /> {mov.date.toLocaleDateString()}
+                                </span>
+                                <DeleteButton id={mov.id} type="MOVEMENT" clientId={id} caseId={caseId} />
+                            </div>
+                            <CardContent className="p-5">
+                                <h4 className="font-bold text-lg text-slate-900 dark:text-white mb-3">{mov.title}</h4>
+                                {mov.description && (
+                                    <p className="text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed border-l-2 border-slate-100 dark:border-slate-800 pl-4">
+                                        {mov.description}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
-                    {mov.description && (
-                        <p className="text-gray-600 text-sm whitespace-pre-wrap">
-                            {mov.description}
-                        </p>
-                    )}
-                </CardContent>
-            </Card>
-        ))
-    )}
-
-</div>
+                ))
+            )}
+        </div>
       </div>
     </div>
   );

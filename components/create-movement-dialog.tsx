@@ -28,7 +28,7 @@ export function CreateMovementDialog({ caseId, clientId }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>+ Nuevo Movimiento</Button>
+        <Button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">+ Nuevo Movimiento</Button>
       </DialogTrigger>
       
       {/* Diseño de "Pantalla Partida" para que el botón nunca se esconda */}
@@ -78,8 +78,8 @@ export function CreateMovementDialog({ caseId, clientId }: Props) {
             </form>
         </div>
 
-        <div className="p-6 pt-2 border-t mt-auto bg-gray-50 rounded-b-lg">
-             <Button type="submit" form="movement-form" className="w-full">
+        <div className="p-6 pt-2 border-t mt-auto bg-gray-50 dark:bg-slate-950 rounded-b-lg">
+             <Button type="submit" form="movement-form" className="w-full flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">
                 Guardar Movimiento
              </Button>
         </div>
