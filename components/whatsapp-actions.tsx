@@ -20,6 +20,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+// 👇 IMPORTACIÓN DE ICONOS
+import { 
+  MessageCircle, 
+  Bell, 
+  CalendarClock, 
+  CreditCard, 
+  DollarSign, 
+  Send 
+} from "lucide-react";
+
 interface WhatsAppActionsProps {
   client: any;
   legalCase: any;
@@ -73,27 +83,27 @@ export function WhatsAppActions({ client, legalCase }: WhatsAppActionsProps) {
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
             <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold gap-2 shadow-sm transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0 .5-.5l.14-.35A.5.5 0 0 0 10.62 8 8 0 0 0 9 6.22 8 8 0 0 0 7.38 7.5a.5.5 0 0 0 .14.65l.35.14a.5.5 0 0 0 .5-.5V7a.5.5 0 0 0-1 0v1a.5.5 0 0 0 .5.5h1z"/></svg>
+            <MessageCircle className="h-4 w-4" />
             Enviar Mensaje...
             </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64 dark:bg-slate-900 dark:border-slate-800">
             <DropdownMenuLabel>Seleccionar Plantilla</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="dark:bg-slate-800" />
             
-            <DropdownMenuItem onClick={() => openWa(msgNews)} className="cursor-pointer py-3">
-                👋 Avisar Novedades
+            <DropdownMenuItem onClick={() => openWa(msgNews)} className="cursor-pointer py-3 gap-2">
+                <Bell className="h-4 w-4 text-blue-500" /> Avisar Novedades
             </DropdownMenuItem>
             
-            <DropdownMenuItem onClick={() => openWa(msgEvent)} className="cursor-pointer py-3">
-                📅 Recordar Cita/Audiencia
+            <DropdownMenuItem onClick={() => openWa(msgEvent)} className="cursor-pointer py-3 gap-2">
+                <CalendarClock className="h-4 w-4 text-amber-500" /> Recordar Cita/Audiencia
             </DropdownMenuItem>
             
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="dark:bg-slate-800" />
             
             {/* Este botón ahora abre el Dialog en lugar de WhatsApp directo */}
-            <DropdownMenuItem onClick={() => setShowCbuDialog(true)} className="cursor-pointer text-green-600 dark:text-green-400 font-bold py-3 bg-green-50 dark:bg-green-900/10">
-                💸 Enviar CBU / Solicitud de Pago
+            <DropdownMenuItem onClick={() => setShowCbuDialog(true)} className="cursor-pointer text-green-700 dark:text-green-400 font-bold py-3 bg-green-50 dark:bg-green-900/10 gap-2 focus:bg-green-100 dark:focus:bg-green-900/20">
+                <CreditCard className="h-4 w-4" /> Enviar CBU / Solicitud de Pago
             </DropdownMenuItem>
         </DropdownMenuContent>
         </DropdownMenu>
@@ -102,32 +112,34 @@ export function WhatsAppActions({ client, legalCase }: WhatsAppActionsProps) {
         <Dialog open={showCbuDialog} onOpenChange={setShowCbuDialog}>
             <DialogContent className="sm:max-w-[400px] dark:bg-slate-950 dark:border-slate-800">
                 <DialogHeader>
-                    <DialogTitle>Solicitar Pago</DialogTitle>
+                    <DialogTitle className="dark:text-white">Solicitar Pago</DialogTitle>
                 </DialogHeader>
                 
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="amount" className="font-bold">Monto a pedir (Opcional)</Label>
+                        <Label htmlFor="amount" className="font-bold dark:text-gray-300">Monto a pedir (Opcional)</Label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-500">$</span>
+                            <span className="absolute left-3 top-2.5">
+                                <DollarSign className="h-4 w-4 text-gray-500" />
+                            </span>
                             <Input
                                 id="amount"
                                 type="number"
                                 placeholder="Ej: 50000"
-                                className="pl-7 text-lg font-bold"
+                                className="pl-9 text-lg font-bold dark:bg-slate-900 dark:border-slate-800 dark:text-white"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 onKeyDown={(e) => { if(e.key === 'Enter') handleSendCbu() }} // Enviar con Enter
                             />
                         </div>
-                        <p className="text-xs text-gray-500">Si lo dejás vacío, solo se enviarán los datos bancarios.</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Si lo dejás vacío, solo se enviarán los datos bancarios.</p>
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowCbuDialog(false)}>Cancelar</Button>
+                    <Button variant="outline" onClick={() => setShowCbuDialog(false)} className="dark:border-slate-700 dark:text-gray-300">Cancelar</Button>
                     <Button onClick={handleSendCbu} className="bg-green-600 hover:bg-green-700 text-white gap-2">
-                        Enviar WhatsApp 🚀
+                        <Send className="h-4 w-4" /> Enviar WhatsApp
                     </Button>
                 </DialogFooter>
             </DialogContent>

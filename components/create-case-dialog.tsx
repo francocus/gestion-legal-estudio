@@ -20,6 +20,17 @@ import {
 } from "@/components/ui/select";
 import { createCase } from "@/app/actions";
 import { santaFeCourts } from "@/lib/santa-fe-courts";
+// 👇 IMPORTACIÓN DE ICONOS
+import { 
+  FolderPlus, 
+  Gavel, 
+  Users, 
+  Briefcase, 
+  ShieldAlert, 
+  HeartHandshake, 
+  FileText,
+  Save 
+} from "lucide-react";
 
 export function CreateCaseDialog({ clientId }: { clientId: string }) {
   const [open, setOpen] = useState(false);
@@ -42,9 +53,9 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* 🔵 ACCIÓN PRINCIPAL: AZUL */}
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm transition-all">
-          + Nuevo Expediente
+        {/* 🔵 ACCIÓN PRINCIPAL: AZUL CON ICONO */}
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm transition-all gap-2">
+          <FolderPlus className="h-4 w-4" /> Nuevo Expediente
         </Button>
       </DialogTrigger>
       
@@ -97,12 +108,24 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
                 <SelectValue placeholder="Seleccionar fuero" />
               </SelectTrigger>
               <SelectContent className="dark:bg-slate-950 dark:border-slate-800">
-                <SelectItem value="CIVIL">🏛️ Civil y Comercial</SelectItem>
-                <SelectItem value="FAMILIA">👨‍👩‍👧 Familia</SelectItem>
-                <SelectItem value="LABORAL">👷 Laboral</SelectItem>
-                <SelectItem value="PENAL">⚖️ Penal</SelectItem>
-                <SelectItem value="PREVISIONAL">👴 Previsional</SelectItem>
-                <SelectItem value="ADMINISTRATIVO">📄 Administrativo</SelectItem>
+                <SelectItem value="CIVIL">
+                    <div className="flex items-center gap-2"><Gavel className="h-3.5 w-3.5" /> Civil y Comercial</div>
+                </SelectItem>
+                <SelectItem value="FAMILIA">
+                    <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Familia</div>
+                </SelectItem>
+                <SelectItem value="LABORAL">
+                    <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5" /> Laboral</div>
+                </SelectItem>
+                <SelectItem value="PENAL">
+                    <div className="flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5" /> Penal</div>
+                </SelectItem>
+                <SelectItem value="PREVISIONAL">
+                    <div className="flex items-center gap-2"><HeartHandshake className="h-3.5 w-3.5" /> Previsional</div>
+                </SelectItem>
+                <SelectItem value="ADMINISTRATIVO">
+                    <div className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Administrativo</div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -117,9 +140,13 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
           <Button 
             type="submit" 
             disabled={loading} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 mt-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 mt-2 gap-2"
           >
-            {loading ? "Creando..." : "Crear Expediente"}
+            {loading ? "Creando..." : (
+                <>
+                    <Save className="h-4 w-4" /> Crear Expediente
+                </>
+            )}
           </Button>
 
         </form>

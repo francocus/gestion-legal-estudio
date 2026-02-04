@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
+// 👇 IMPORTACIÓN DE ICONOS
+import { FileDown } from "lucide-react";
 
 interface PdfButtonProps {
   client: any;
@@ -23,7 +25,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     // --- ENCABEZADO ---
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Estudio Juridico Digital", margin, y); // Sin tildes por las dudas en el header
+    doc.text("Estudio Juridico Digital", margin, y);
     
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 150, y);
     y += 10;
@@ -43,7 +45,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 100, 200);
-    doc.text("Datos del Cliente", margin, y); // 👈 SAQUÉ EL EMOJI 👤
+    doc.text("Datos del Cliente", margin, y);
     y += 10;
 
     doc.setFontSize(11);
@@ -65,7 +67,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 100, 200);
-    doc.text("Informacion del Caso", margin, y); // 👈 SAQUÉ EL EMOJI 📂
+    doc.text("Informacion del Caso", margin, y);
     y += 10;
 
     doc.setFontSize(11);
@@ -91,7 +93,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 150, 100);
-    doc.text("Estado de Cuenta", margin, y); // 👈 SAQUÉ EL EMOJI 💰
+    doc.text("Estado de Cuenta", margin, y);
     y += 10;
 
     doc.setFontSize(11);
@@ -119,7 +121,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
         doc.setTextColor(0);
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text("Notas / Observaciones:", margin, y); // 👈 SAQUÉ EL EMOJI 📝
+        doc.text("Notas / Observaciones:", margin, y);
         y += 7;
         
         doc.setFontSize(10);
@@ -137,9 +139,9 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
         variant="outline" 
         size="sm" 
         onClick={generatePDF}
-        className="gap-2 dark:bg-slate-900 dark:border-slate-800 dark:text-gray-300"
+        className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:bg-slate-900 dark:border-slate-800 dark:text-gray-300 dark:hover:bg-slate-800 shadow-sm transition-all"
     >
-      📄 Descargar Ficha PDF
+      <FileDown className="h-3.5 w-3.5" /> Descargar Ficha PDF
     </Button>
   );
 }

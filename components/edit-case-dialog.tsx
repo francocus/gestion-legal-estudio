@@ -20,6 +20,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { editCase } from "@/app/actions"; 
+import { santaFeCourts } from "@/lib/santa-fe-courts";
+
+// 👇 IMPORTACIÓN DE ICONOS
+import { 
+  Pencil, 
+  DollarSign, 
+  Link as LinkIcon, 
+  StickyNote,
+  Gavel,
+  Users,
+  Briefcase,
+  ShieldAlert,
+  HeartHandshake,
+  FileText
+} from "lucide-react";
 
 export function EditCaseDialog({ legalCase }: { legalCase: any }) {
   const [open, setOpen] = useState(false);
@@ -39,17 +54,18 @@ export function EditCaseDialog({ legalCase }: { legalCase: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* ⚪ ACCIÓN SECUNDARIA: OUTLINE (Gris en claro / Slate en oscuro) */}
+        {/* ⚪ ACCIÓN SECUNDARIA: OUTLINE CON ICONO LÁPIZ */}
         <Button 
             variant="outline" 
             size="sm" 
             className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100 dark:bg-slate-900 dark:border-slate-800 dark:text-gray-300 dark:hover:bg-slate-800 shadow-sm transition-all"
         >
-          ✏️ Editar Datos
+          <Pencil className="h-3.5 w-3.5" /> Editar Datos
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[425px] dark:bg-slate-950 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+      {/* 👇 ACÁ ESTÁ EL CAMBIO: sm:max-w-[600px] (Antes era 425px) */}
+      <DialogContent className="sm:max-w-[600px] dark:bg-slate-950 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="dark:text-white">Editar Expediente</DialogTitle>
         </DialogHeader>
@@ -66,15 +82,28 @@ export function EditCaseDialog({ legalCase }: { legalCase: any }) {
                 <Label htmlFor="code" className="dark:text-gray-300">Nº Expediente</Label>
                 <Input id="code" name="code" defaultValue={legalCase.code} required className="dark:bg-slate-900 dark:border-slate-800" />
             </div>
+            
             <div className="grid gap-2">
                 <Label htmlFor="juzgado" className="dark:text-gray-300">Juzgado</Label>
-                <Input id="juzgado" name="juzgado" defaultValue={legalCase.juzgado} required className="dark:bg-slate-900 dark:border-slate-800" />
+                <Select name="juzgado" defaultValue={legalCase.juzgado}>
+                  <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800 w-full">
+                    <SelectValue placeholder="Seleccionar Juzgado" />
+                  </SelectTrigger>
+                  <SelectContent className="dark:bg-slate-950 dark:border-slate-800 max-h-[300px]">
+                    {santaFeCourts.map((court) => (
+                      <SelectItem key={court} value={court}>
+                        {court}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="OTRO">Otro / Fuera de Lista</SelectItem>
+                  </SelectContent>
+                </Select>
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="totalFee" className="dark:text-gray-300 font-bold text-green-600 dark:text-green-400">
-                💰 Honorarios Totales
+            <Label htmlFor="totalFee" className="dark:text-gray-300 font-bold text-green-600 dark:text-green-400 flex items-center gap-1">
+                <DollarSign className="h-4 w-4" /> Honorarios Totales
             </Label>
             <Input id="totalFee" name="totalFee" type="number" defaultValue={legalCase.totalFee || 0} className="dark:bg-slate-900 dark:border-slate-800 font-bold" />
           </div>
@@ -94,7 +123,9 @@ export function EditCaseDialog({ legalCase }: { legalCase: any }) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="driveLink" className="dark:text-gray-300">☁️ Link Expediente</Label>
+            <Label htmlFor="driveLink" className="dark:text-gray-300 flex items-center gap-1">
+                <LinkIcon className="h-4 w-4 text-blue-500" /> Link Expediente
+            </Label>
             <Input id="driveLink" name="driveLink" defaultValue={legalCase.driveLink || ""} className="dark:bg-slate-900 dark:border-slate-800 text-blue-600 dark:text-blue-400" />
           </div>
 
@@ -105,18 +136,32 @@ export function EditCaseDialog({ legalCase }: { legalCase: any }) {
                 <SelectValue placeholder="Fuero" />
               </SelectTrigger>
               <SelectContent className="dark:bg-slate-950 dark:border-slate-800">
-                <SelectItem value="CIVIL">🏛️ Civil y Comercial</SelectItem>
-                <SelectItem value="FAMILIA">👨‍👩‍👧 Familia</SelectItem>
-                <SelectItem value="LABORAL">👷 Laboral</SelectItem>
-                <SelectItem value="PENAL">⚖️ Penal</SelectItem>
-                <SelectItem value="PREVISIONAL">👴 Previsional</SelectItem>
-                <SelectItem value="ADMINISTRATIVO">📄 Administrativo</SelectItem>
+                <SelectItem value="CIVIL">
+                    <div className="flex items-center gap-2"><Gavel className="h-3.5 w-3.5" /> Civil y Comercial</div>
+                </SelectItem>
+                <SelectItem value="FAMILIA">
+                    <div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Familia</div>
+                </SelectItem>
+                <SelectItem value="LABORAL">
+                    <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5" /> Laboral</div>
+                </SelectItem>
+                <SelectItem value="PENAL">
+                    <div className="flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5" /> Penal</div>
+                </SelectItem>
+                <SelectItem value="PREVISIONAL">
+                    <div className="flex items-center gap-2"><HeartHandshake className="h-3.5 w-3.5" /> Previsional</div>
+                </SelectItem>
+                <SelectItem value="ADMINISTRATIVO">
+                    <div className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Administrativo</div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="description" className="dark:text-gray-300 font-bold">📝 Notas del Caso</Label>
+            <Label htmlFor="description" className="dark:text-gray-300 font-bold flex items-center gap-1">
+                <StickyNote className="h-4 w-4 text-amber-500" /> Notas del Caso
+            </Label>
             <Textarea 
                 id="description" 
                 name="description" 

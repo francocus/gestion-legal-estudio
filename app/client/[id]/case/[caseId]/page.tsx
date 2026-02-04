@@ -9,6 +9,8 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { WhatsAppActions } from "@/components/whatsapp-actions";
 import Link from "next/link";
+import { GenerateDocDialog } from "@/components/generate-doc-dialog"; // 👈 IMPORTANTE: Importamos el generador
+
 // 👇 IMPORTACIÓN UNIFICADA DE ICONOS PROFESIONALES
 import { 
   Gavel, 
@@ -24,7 +26,11 @@ import {
   MapPin,
   FileText,
   Users,
-  StickyNote
+  StickyNote,
+  Zap,
+  Wallet,
+  AlertTriangle,
+  ExternalLink
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -97,29 +103,43 @@ export default async function CasePage({ params }: PageProps) {
                 </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row md:flex-col items-end gap-2 w-full md:w-auto">
-                 <PdfButton 
-                    client={legalCase.client} 
-                    legalCase={legalCase} 
-                    stats={{ totalIncome, totalFee: legalCase.totalFee || 0, balance }}
-                 />
-                 <EditCaseDialog legalCase={legalCase} />
-                 {legalCase.driveLink && (
-                     <a 
-                        href={legalCase.driveLink} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
-                     >
-                        <FileText className="h-4 w-4" /> Abrir Expediente Digital ↗
-                     </a>
-                 )}
+            <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                 {/* BLOQUE DE BOTONES DE DOCUMENTACIÓN */}
+                 <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                     <PdfButton 
+                        client={legalCase.client} 
+                        legalCase={legalCase} 
+                        stats={{ totalIncome, totalFee: legalCase.totalFee || 0, balance }}
+                     />
+                     
+                     {/* 👇 ACÁ ESTÁ EL NUEVO GENERADOR DE ESCRITOS */}
+                     <GenerateDocDialog 
+                        client={legalCase.client} 
+                        legalCase={legalCase} 
+                     />
+                 </div>
+
+                 {/* BLOQUE DE EDICIÓN Y LINK */}
+                 <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                     <EditCaseDialog legalCase={legalCase} />
+                     
+                     {legalCase.driveLink && (
+                         <a 
+                            href={legalCase.driveLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-md transition-all active:scale-95 w-full sm:w-auto justify-center"
+                         >
+                            <ExternalLink className="h-4 w-4" /> Abrir Expediente Digital
+                         </a>
+                     )}
+                 </div>
             </div>
         </div>
 
         <div className="flex items-center gap-2 mt-6">
              <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase border ${
-                legalCase.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900' :
+                legalCase.status === 'ACTIVE' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800' :
                 legalCase.status === 'MEDIATION' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
                 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700'
              }`}>
@@ -144,8 +164,8 @@ export default async function CasePage({ params }: PageProps) {
           </div>
 
           {legalCase.events.length === 0 ? (
-              <p className="text-sm text-red-400 italic bg-white/50 dark:bg-black/20 p-4 rounded-lg border border-dashed border-red-200 dark:border-red-900/30 text-center">
-                No hay vencimientos pendientes para este caso.
+              <p className="text-sm text-red-400 italic bg-white/50 dark:bg-black/20 p-4 rounded-lg border border-dashed border-red-200 dark:border-red-900/30 text-center flex items-center justify-center gap-2">
+                <CalendarDays className="h-4 w-4" /> No hay vencimientos pendientes para este caso.
               </p>
           ) : (
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -155,8 +175,11 @@ export default async function CasePage({ params }: PageProps) {
                               <DeleteButton id={evt.id} type="EVENT" clientId={id} caseId={caseId} />
                           </div>
                           <CardContent className="p-4">
-                              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1 block">
-                                  {evt.type === 'HEARING' ? '⚖️ Audiencia' : evt.type === 'DEADLINE' ? '⚡ Plazo' : '📅 Reunión'}
+                              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                  {evt.type === 'HEARING' ? <Gavel className="h-3 w-3" /> : 
+                                   evt.type === 'DEADLINE' ? <Zap className="h-3 w-3" /> : 
+                                   <Users className="h-3 w-3" />}
+                                  {evt.type === 'HEARING' ? 'Audiencia' : evt.type === 'DEADLINE' ? 'Plazo Fatal' : 'Reunión'}
                               </span>
                               <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-2">{evt.title}</h4>
                               <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
@@ -210,14 +233,18 @@ export default async function CasePage({ params }: PageProps) {
                     </div>
                 </div>
             ) : (
-                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg text-center text-amber-700 dark:text-amber-400 text-sm italic">
-                    Sin honorarios pactados. Edite el caso para cargar el presupuesto.
+                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg text-center text-amber-700 dark:text-amber-400 text-sm italic flex flex-col items-center gap-1">
+                    <AlertTriangle className="h-5 w-5 mb-1" />
+                    <span>Sin honorarios pactados. Edite el caso para cargar el presupuesto.</span>
                 </div>
             )}
 
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-100 dark:border-slate-800 overflow-hidden">
                 {legalCase.transactions.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-xs italic">No hay movimientos de dinero.</div>
+                    <div className="p-8 text-center text-slate-400 text-xs italic flex flex-col items-center gap-2">
+                        <Wallet className="h-6 w-6 opacity-30" />
+                        No hay movimientos de dinero.
+                    </div>
                 ) : (
                     <div className="divide-y dark:divide-slate-800">
                         {legalCase.transactions.map((tx) => (

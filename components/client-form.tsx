@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/app/actions";
 import { santaFeCities } from "@/lib/santa-fe-cities";
+// 👇 IMPORTACIÓN DE ICONOS
+import { UserPlus, ChevronDown, ChevronUp, Save } from "lucide-react";
 
 export function CreateClientDialog() {
   const [open, setOpen] = useState(false);
@@ -38,8 +40,8 @@ export function CreateClientDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {/* 🔵 ACCIÓN PRINCIPAL: AZUL */}
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm transition-all">
-          + Nuevo Cliente
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-sm transition-all gap-2">
+          <UserPlus className="h-4 w-4" /> Nuevo Cliente
         </Button>
       </DialogTrigger>
       
@@ -91,14 +93,22 @@ export function CreateClientDialog() {
           </div>
 
           <div className="pt-2">
-            {/* ⚪ ACCIÓN SECUNDARIA: GRIS / GHOST (Para no competir visualmente) */}
+            {/* ⚪ ACCIÓN SECUNDARIA: GRIS / GHOST */}
             <Button 
                 type="button" 
                 variant="ghost" 
-                className="w-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-300 dark:border-slate-700 dark:text-gray-400 dark:hover:bg-slate-900/50"
+                className="w-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 border border-dashed border-gray-300 dark:border-slate-700 dark:text-gray-400 dark:hover:bg-slate-900/50 gap-2"
                 onClick={() => setShowAdditional(!showAdditional)}
             >
-                {showAdditional ? "⬆️ Menos detalles" : "⬇️ Cargar Datos Adicionales (CUIT, Domicilio, etc.)"}
+                {showAdditional ? (
+                    <>
+                        <ChevronUp className="h-4 w-4" /> Menos detalles
+                    </>
+                ) : (
+                    <>
+                        <ChevronDown className="h-4 w-4" /> Cargar Datos Adicionales (CUIT, Domicilio, etc.)
+                    </>
+                )}
             </Button>
           </div>
 
@@ -113,7 +123,7 @@ export function CreateClientDialog() {
                       <div className="grid gap-2">
                         <Label className="dark:text-gray-300">Nacionalidad</Label>
                         <Input name="nationality" defaultValue="Argentina" className="dark:bg-slate-900 dark:border-slate-800" />
-                     </div>
+                      </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -151,7 +161,7 @@ export function CreateClientDialog() {
                             <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
                                 <SelectValue placeholder="Ciudad..." />
                             </SelectTrigger>
-                            <SelectContent className="max-h-[200px] dark:bg-slate-950 dark:border-slate-800">
+                            <SelectContent className="max-h-[200px] dark:bg-slate-900 dark:border-slate-800">
                                 <SelectItem value="EMPTY_SELECTION" className="text-gray-400">-- No especificar --</SelectItem>
                                 {santaFeCities.map(city => (
                                     <SelectItem key={city} value={city}>{city}</SelectItem>
@@ -177,9 +187,13 @@ export function CreateClientDialog() {
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 transition-all shadow-md shadow-blue-900/20 mt-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 transition-all shadow-md shadow-blue-900/20 mt-2 gap-2"
           >
-            {loading ? "Guardando..." : "Guardar Ficha"}
+            {loading ? "Guardando..." : (
+                <>
+                    <Save className="h-4 w-4" /> Guardar Ficha
+                </>
+            )}
           </Button>
         </form>
       </DialogContent>

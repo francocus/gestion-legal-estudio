@@ -272,3 +272,39 @@ export async function authenticate(prevState: string | undefined, formData: Form
 export async function logout() {
   await signOut();
 }
+
+// ... imports existentes
+
+export async function searchGlobal(query: string) {
+  if (!query || query.length < 2) return { clients: [], cases: [] };
+
+  const term = query.trim();
+
+  // 1. Buscar Clientes (Nombre, Apellido, DNI)
+  const clients = await db.client.findMany({
+    where: {
+      OR: [
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { dni: { contains: term } },
+      ],
+    },
+    take: 5,
+    select: { id: true, firstName: true, lastName: true, dni: true },
+  });
+
+  // 2. Buscar Expedientes (Carátula, Número, Juzgado)
+  const cases = await db.case.findMany({
+    where: {
+      OR: [
+        { caratula: { contains: term, mode: "insensitive" } },
+        { code: { contains: term, mode: "insensitive" } },
+        { juzgado: { contains: term, mode: "insensitive" } },
+      ],
+    },
+    take: 5,
+    select: { id: true, caratula: true, code: true, clientId: true },
+  });
+
+  return { clients, cases };
+}

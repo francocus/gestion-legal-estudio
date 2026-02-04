@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+// 👇 IMPORTACIÓN DE ICONOS
+import { ExternalLink } from "lucide-react";
 
 export function Footer() {
   const pathname = usePathname();
@@ -32,9 +34,9 @@ export function Footer() {
                     href={link.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors font-medium flex items-center gap-1.5"
+                    className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors font-medium flex items-center gap-1.5 hover:underline"
                 >
-                    🔗 {link.name}
+                    <ExternalLink className="h-3.5 w-3.5" /> {link.name}
                 </a>
             ))}
         </div>
