@@ -223,9 +223,8 @@ export default async function Home({ searchParams }: PageProps) {
                                         </p>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        {/* 👇 ACÁ ESTÁ EL CAMBIO PARA LOS COLORES */}
+                                        {/* TAGS CON COLORES SEGÚN FUERO */}
                                         {client.cases.map((c, i) => {
-                                            
                                             const areaStyles: Record<string, string> = {
                                                 CIVIL: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
                                                 FAMILIA: "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800",
@@ -234,7 +233,6 @@ export default async function Home({ searchParams }: PageProps) {
                                                 PREVISIONAL: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
                                                 ADMINISTRATIVO: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/30 dark:text-slate-300 dark:border-slate-800",
                                             };
-
                                             const style = areaStyles[c.area || 'CIVIL'] || areaStyles.CIVIL;
 
                                             return (
@@ -262,36 +260,39 @@ export default async function Home({ searchParams }: PageProps) {
         {/* === COLUMNA DERECHA (Resumen Financiero y Actividad) === */}
         <div className="lg:col-span-4 space-y-6">
             
-            {/* TARJETA DE ESTADO FINANCIERO (Compacta y Linkeada) */}
-            <Card className="bg-slate-900 text-white border-slate-800 shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <BarChart3 className="h-32 w-32" />
+            {/* 👇 ACÁ ESTÁ EL CAMBIO: CAJA DEL ESTUDIO ADAPTABLE */}
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-100 transition-opacity">
+                    {/* El icono de fondo es sutil en ambos modos */}
+                    <BarChart3 className="h-32 w-32 text-slate-100 dark:text-slate-800" />
                 </div>
+                
                 <CardHeader className="pb-2 relative z-10">
-                    <CardTitle className="text-sm font-medium text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
                         <Wallet className="h-4 w-4" /> Caja del Estudio
                     </CardTitle>
                 </CardHeader>
+                
                 <CardContent className="relative z-10">
                     <div className="mb-4">
-                        <span className="text-4xl font-bold tracking-tight">
+                        <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                             $ {balance.toLocaleString()}
                         </span>
-                        <p className="text-xs text-slate-400 mt-1">Balance Total (Ingresos - Gastos)</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Balance Total (Ingresos - Gastos)</p>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 mb-6 border-t border-slate-800 pt-4">
+                    <div className="grid grid-cols-2 gap-4 mb-6 border-t border-slate-100 dark:border-slate-800 pt-4">
                         <div>
-                            <p className="text-[10px] text-emerald-400 uppercase font-bold flex items-center gap-1">
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" /> Ingresos
                             </p>
-                            <p className="font-mono text-lg">$ {totalIngresos.toLocaleString()}</p>
+                            <p className="font-mono text-lg text-slate-700 dark:text-slate-200">$ {totalIngresos.toLocaleString()}</p>
                         </div>
                         <div>
-                            <p className="text-[10px] text-red-400 uppercase font-bold flex items-center gap-1">
+                            <p className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold flex items-center gap-1">
                                 <TrendingDown className="h-3 w-3" /> Gastos
                             </p>
-                            <p className="font-mono text-lg">$ {totalGastos.toLocaleString()}</p>
+                            <p className="font-mono text-lg text-slate-700 dark:text-slate-200">$ {totalGastos.toLocaleString()}</p>
                         </div>
                     </div>
 

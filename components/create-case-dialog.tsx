@@ -59,7 +59,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[425px] dark:bg-slate-950 dark:border-slate-800">
+      <DialogContent className="sm:max-w-[500px] dark:bg-slate-950 dark:border-slate-800">
         <DialogHeader>
           <DialogTitle className="dark:text-white">Iniciar Nuevo Expediente</DialogTitle>
         </DialogHeader>
@@ -80,18 +80,20 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
             <Input id="code" name="code" placeholder="Ej: 21-12345678-9" required className="dark:bg-slate-900 dark:border-slate-800"/>
           </div>
 
-          {/* SELECTOR DE JUZGADOS */}
+          {/* SELECTOR DE JUZGADOS - CORREGIDO */}
           <div className="grid gap-2">
             <Label htmlFor="juzgado" className="dark:text-gray-300">
                 Juzgado / Radicación <span className="text-red-500">*</span>
             </Label>
             <Select name="juzgado" required>
-              <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
+              {/* 👇 ACÁ ESTÁ EL ARREGLO: [&>span]:truncate para cortar texto largo */}
+              <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800 w-full [&>span]:truncate text-left">
                 <SelectValue placeholder="Seleccionar Juzgado..." />
               </SelectTrigger>
-              <SelectContent className="max-h-[300px] dark:bg-slate-950 dark:border-slate-800">
+              
+              <SelectContent className="max-h-[300px] max-w-[400px] dark:bg-slate-950 dark:border-slate-800">
                 {santaFeCourts.map((court) => (
-                  <SelectItem key={court} value={court}>
+                  <SelectItem key={court} value={court} className="whitespace-normal">
                     {court}
                   </SelectItem>
                 ))}
