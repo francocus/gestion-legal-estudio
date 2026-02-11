@@ -9,7 +9,6 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { WhatsAppActions } from "@/components/whatsapp-actions";
 import Link from "next/link";
-import { GenerateDocDialog } from "@/components/generate-doc-dialog"; // 👈 IMPORTANTE: Importamos el generador
 
 // 👇 IMPORTACIÓN UNIFICADA DE ICONOS PROFESIONALES
 import { 
@@ -112,11 +111,6 @@ export default async function CasePage({ params }: PageProps) {
                         stats={{ totalIncome, totalFee: legalCase.totalFee || 0, balance }}
                      />
                      
-                     {/* 👇 ACÁ ESTÁ EL NUEVO GENERADOR DE ESCRITOS */}
-                     <GenerateDocDialog 
-                        client={legalCase.client} 
-                        legalCase={legalCase} 
-                     />
                  </div>
 
                  {/* BLOQUE DE EDICIÓN Y LINK */}

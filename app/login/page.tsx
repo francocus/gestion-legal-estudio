@@ -84,7 +84,7 @@ export default function LoginPage() {
       
       {/* Footer discreto */}
       <div className="absolute bottom-4 text-center text-xs text-slate-600">
-        &copy; {new Date().getFullYear()} Sistema de Gestión Legal
+        &copy; {new Date().getFullYear()} Estudio Jurídico
       </div>
       
     </div>

@@ -25,7 +25,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     // --- ENCABEZADO ---
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text("Estudio Juridico Digital", margin, y);
+    doc.text("Estudio Juridico", margin, y);
     
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 150, y);
     y += 10;

@@ -23,7 +23,7 @@ export function Footer() {
         
         {/* Copyright / Marca */}
         <div className="text-gray-400 dark:text-gray-500 font-medium">
-            © {new Date().getFullYear()} Estudio Jurídico Digital
+            © {new Date().getFullYear()} Estudio Jurídico
         </div>
 
         {/* Links Externos */}
