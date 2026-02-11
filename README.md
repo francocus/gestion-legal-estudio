@@ -46,5 +46,5 @@ Desarrollado con una arquitectura moderna, tipada y de alto rendimiento:
 
 El sistema se encuentra en fase de producción, con todas sus funcionalidades principales operativas.
 
-🔗 **Deploy (Demo):** []
+🔗 **Deploy (Demo):** [[gestion-legal-estudio.vercel.app](https://gestion-legal-estudio.vercel.app/)]
 *(Acceso con credenciales de demostración)*
