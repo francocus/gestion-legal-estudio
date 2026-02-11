@@ -5,11 +5,48 @@ import { revalidatePath } from "next/cache";
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 
-// --- CREAR CLIENTE ---
+// ==========================================
+// 🔐 AUTENTICACIÓN (LOGIN / LOGOUT)
+// ==========================================
+
+export async function authenticate(prevState: string | undefined, formData: FormData) {
+  try {
+    // 👇 EL CAMBIO MÁGICO: redirect: false
+    // Esto evita que el servidor redireccione, permitiendo que el cliente
+    // maneje el éxito y haga el refresco completo (window.location.href).
+    await signIn("credentials", {
+      ...Object.fromEntries(formData),
+      redirect: false, 
+    });
+
+    return "success"; 
+
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return "Credenciales inválidas.";
+        default:
+          return "Algo salió mal.";
+      }
+    }
+    throw error;
+  }
+}
+
+export async function logout() {
+  await signOut({ redirectTo: "/login" });
+}
+
+// ==========================================
+// 👤 CLIENTES
+// ==========================================
+
 export async function createClient(formData: FormData) {
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
   
+  // Helper para evitar guardar "EMPTY_SELECTION"
   const getVal = (key: string) => {
     const val = formData.get(key) as string;
     if (!val || val === "EMPTY_SELECTION") return null; 
@@ -48,126 +85,6 @@ export async function createClient(formData: FormData) {
   revalidatePath("/");
 }
 
-export async function createCase(formData: FormData) {
-  const clientId = formData.get("clientId") as string;
-  const caratula = formData.get("caratula") as string;
-  const code = formData.get("code") as string;
-  const juzgado = formData.get("juzgado") as string;
-  const description = formData.get("description") as string;
-  
-  // 👇 LEER EL ÁREA (Si no viene nada, ponemos CIVIL por defecto)
-  const area = (formData.get("area") as string) || "CIVIL";
-
-  if (!clientId || !caratula) return;
-
-  await db.case.create({
-    data: {
-      caratula, code, juzgado, description, clientId,
-      area // 👈 Guardamos
-    },
-  });
-    
-  revalidatePath(`/client/${clientId}`);
-}
-
-// --- CREAR MOVIMIENTO ---
-export async function createMovement(formData: FormData) {
-  const caseId = formData.get("caseId") as string;
-  const clientId = formData.get("clientId") as string;
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string;
-  const dateStr = formData.get("date") as string;
-
-  if (!caseId || !title || !dateStr) return;
-
-  await db.movement.create({
-    data: { caseId, title, description, date: new Date(dateStr) },
-  });
-
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-}
-
-// --- CREAR EVENTO ---
-export async function createEvent(formData: FormData) {
-  const caseId = formData.get("caseId") as string;
-  const clientId = formData.get("clientId") as string;
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string;
-  const dateStr = formData.get("date") as string;
-  const type = formData.get("type") as "HEARING" | "DEADLINE" | "MEETING";
-
-  if (!caseId || !title || !dateStr || !type) return;
-
-  await db.event.create({
-    data: { caseId, title, description, type, date: new Date(dateStr), isDone: false },
-  });
-
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-  revalidatePath("/");
-}
-
-// --- CREAR TRANSACCIÓN ---
-export async function createTransaction(formData: FormData) {
-  const caseId = formData.get("caseId") as string;
-  const clientId = formData.get("clientId") as string;
-  const description = formData.get("description") as string;
-  const amount = parseFloat(formData.get("amount") as string);
-  const type = formData.get("type") as string;
-
-  if (!caseId || !amount || !type) return;
-
-  await db.transaction.create({
-    data: { caseId, description, amount, type },
-  });
-
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-}
-
-// --- BORRADOS ---
-export async function deleteClient(formData: FormData) {
-  const id = formData.get("id") as string;
-  if (!id) return;
-  await db.client.delete({ where: { id } });
-  revalidatePath("/");
-}
-
-export async function deleteCase(formData: FormData) {
-  const id = formData.get("id") as string;
-  const clientId = formData.get("clientId") as string;
-  if (!id) return;
-  await db.case.delete({ where: { id } });
-  revalidatePath(`/client/${clientId}`);
-}
-
-export async function deleteEvent(formData: FormData) {
-  const id = formData.get("id") as string;
-  const clientId = formData.get("clientId") as string;
-  const caseId = formData.get("caseId") as string;
-  if (!id) return;
-  await db.event.delete({ where: { id } });
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-  revalidatePath("/");
-}
-
-export async function deleteTransaction(formData: FormData) {
-  const id = formData.get("id") as string;
-  const clientId = formData.get("clientId") as string;
-  const caseId = formData.get("caseId") as string;
-  if (!id) return;
-  await db.transaction.delete({ where: { id } });
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-}
-
-export async function deleteMovement(formData: FormData) {
-  const id = formData.get("id") as string;
-  const clientId = formData.get("clientId") as string;
-  const caseId = formData.get("caseId") as string;
-  if (!id) return;
-  await db.movement.delete({ where: { id } });
-  revalidatePath(`/client/${clientId}/case/${caseId}`);
-}
-
-// --- EDICIONES ---
 export async function updateClient(formData: FormData) {
   const id = formData.get("id") as string;
   const firstName = formData.get("firstName") as string;
@@ -187,8 +104,10 @@ export async function updateClient(formData: FormData) {
   const birthPlace = getVal("birthPlace");
   const occupation = getVal("occupation");
   const civilStatus = getVal("civilStatus");
+  
   const rawDate = formData.get("birthDate") as string;
   const birthDate = rawDate ? new Date(rawDate + "T12:00:00") : null;
+  
   const address = getVal("address");
   const location = getVal("location");
   const phone = getVal("phone");
@@ -210,9 +129,35 @@ export async function updateClient(formData: FormData) {
   revalidatePath("/");
 }
 
-// ... (tus otros imports)
+export async function deleteClient(formData: FormData) {
+  const id = formData.get("id") as string;
+  if (!id) return;
+  await db.client.delete({ where: { id } });
+  revalidatePath("/");
+}
 
-// ... (imports y otras funciones)
+// ==========================================
+// ⚖️ EXPEDIENTES (CASES)
+// ==========================================
+
+export async function createCase(formData: FormData) {
+  const clientId = formData.get("clientId") as string;
+  const caratula = formData.get("caratula") as string;
+  const code = formData.get("code") as string;
+  const juzgado = formData.get("juzgado") as string;
+  const description = formData.get("description") as string;
+  const area = (formData.get("area") as string) || "CIVIL";
+
+  if (!clientId || !caratula) return;
+
+  await db.case.create({
+    data: {
+      caratula, code, juzgado, description, clientId, area
+    },
+  });
+    
+  revalidatePath(`/client/${clientId}`);
+}
 
 export async function editCase(formData: FormData) {
   const id = formData.get("id") as string;
@@ -220,32 +165,90 @@ export async function editCase(formData: FormData) {
   const caratula = formData.get("caratula") as string;
   const juzgado = formData.get("juzgado") as string;
   const code = formData.get("code") as string;
-  const status = formData.get("status") as any;
+  // Usamos string para evitar problemas de tipo con Prisma Enum
+  const status = formData.get("status") as any; 
+  
   const totalFeeString = formData.get("totalFee") as string;
-  const totalFee = totalFeeString ? parseInt(totalFeeString) : 0;
+  const totalFee = totalFeeString ? parseFloat(totalFeeString) : 0;
   
   const driveLinkRaw = formData.get("driveLink") as string;
   const driveLink = driveLinkRaw && driveLinkRaw.trim() !== "" ? driveLinkRaw : null;
   
   const area = (formData.get("area") as string) || "CIVIL";
-
-  // 👇 AGREGAR ESTO: Leemos la descripción nueva
   const description = formData.get("description") as string;
 
   if (!id) return;
 
+  // @ts-ignore (Status suele ser un Enum, ignoramos error de TS temporalmente si status viene como string)
   await db.case.update({
     where: { id },
     data: { 
-        caratula, juzgado, status, code, totalFee, driveLink, area,
-        description // 👈 GUARDAMOS LA NOTA
+        caratula, juzgado, status, code, totalFee, driveLink, area, description
     }
   });
 
   revalidatePath("/");
 }
 
-// --- OTROS ---
+export async function deleteCase(formData: FormData) {
+  const id = formData.get("id") as string;
+  const clientId = formData.get("clientId") as string;
+  if (!id) return;
+  await db.case.delete({ where: { id } });
+  revalidatePath(`/client/${clientId}`);
+}
+
+// ==========================================
+// 📜 MOVIMIENTOS
+// ==========================================
+
+export async function createMovement(formData: FormData) {
+  const caseId = formData.get("caseId") as string;
+  const clientId = formData.get("clientId") as string;
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const dateStr = formData.get("date") as string;
+
+  if (!caseId || !title || !dateStr) return;
+
+  await db.movement.create({
+    data: { caseId, title, description, date: new Date(dateStr) },
+  });
+
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+}
+
+export async function deleteMovement(formData: FormData) {
+  const id = formData.get("id") as string;
+  const clientId = formData.get("clientId") as string;
+  const caseId = formData.get("caseId") as string;
+  if (!id) return;
+  await db.movement.delete({ where: { id } });
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+}
+
+// ==========================================
+// 📅 AGENDA (EVENTOS)
+// ==========================================
+
+export async function createEvent(formData: FormData) {
+  const caseId = formData.get("caseId") as string;
+  const clientId = formData.get("clientId") as string;
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const dateStr = formData.get("date") as string;
+  const type = formData.get("type") as "HEARING" | "DEADLINE" | "MEETING";
+
+  if (!caseId || !title || !dateStr || !type) return;
+
+  await db.event.create({
+    data: { caseId, title, description, type, date: new Date(dateStr), isDone: false },
+  });
+
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+  revalidatePath("/");
+}
+
 export async function toggleEventStatus(eventId: string, currentStatus: boolean) {
   await db.event.update({
     where: { id: eventId },
@@ -254,26 +257,48 @@ export async function toggleEventStatus(eventId: string, currentStatus: boolean)
   revalidatePath("/");
 }
 
-// --- AUTH ---
-export async function authenticate(prevState: string | undefined, formData: FormData) {
-  try {
-    await signIn("credentials", formData);
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin": return "Credenciales inválidas.";
-        default: return "Algo salió mal.";
-      }
-    }
-    throw error;
-  }
+export async function deleteEvent(formData: FormData) {
+  const id = formData.get("id") as string;
+  const clientId = formData.get("clientId") as string;
+  const caseId = formData.get("caseId") as string;
+  if (!id) return;
+  await db.event.delete({ where: { id } });
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+  revalidatePath("/");
 }
 
-export async function logout() {
-  await signOut();
+// ==========================================
+// 💰 TRANSACCIONES (CAJA)
+// ==========================================
+
+export async function createTransaction(formData: FormData) {
+  const caseId = formData.get("caseId") as string;
+  const clientId = formData.get("clientId") as string;
+  const description = formData.get("description") as string;
+  const amount = parseFloat(formData.get("amount") as string);
+  const type = formData.get("type") as string; // INCOME o EXPENSE
+
+  if (!caseId || !amount || !type) return;
+
+  await db.transaction.create({
+    data: { caseId, description, amount, type },
+  });
+
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
 }
 
-// ... imports existentes
+export async function deleteTransaction(formData: FormData) {
+  const id = formData.get("id") as string;
+  const clientId = formData.get("clientId") as string;
+  const caseId = formData.get("caseId") as string;
+  if (!id) return;
+  await db.transaction.delete({ where: { id } });
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+}
+
+// ==========================================
+// 🔍 BÚSQUEDA GLOBAL
+// ==========================================
 
 export async function searchGlobal(query: string) {
   if (!query || query.length < 2) return { clients: [], cases: [] };
