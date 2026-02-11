@@ -6,18 +6,23 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/app/actions";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { GlobalSearch } from "@/components/global-search"; 
+import { GlobalSearch } from "@/components/global-search";
 
 // 👇 IMPORTACIÓN DE ICONOS
 import { 
   Scale, 
-  DollarSign, 
   LogOut, 
   CalendarDays, 
-  TrendingUp 
+  TrendingUp,
+  Users
 } from "lucide-react";
 
-export function Navbar() {
+// Definimos la interfaz para las propiedades de la Navbar
+interface NavbarProps {
+  user: any; // El usuario que viene desde el MainLayout
+}
+
+export function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
   const [dolar, setDolar] = useState<{ compra: number; venta: number } | null>(null);
 
@@ -28,7 +33,9 @@ export function Navbar() {
       .catch((err) => console.error("Error dólar:", err));
   }, []);
 
+  // Ocultamos la Navbar en las rutas de acceso
   if (pathname === "/login") return null;
+  if (pathname === "/register") return null;
 
   const VALOR_JUS = 118048.44; 
 
@@ -36,7 +43,9 @@ export function Navbar() {
      <nav className="w-full border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-50">
         <div className="w-full px-6 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0">
             
-            {/* LADO IZQUIERDO: LOGO + WIDGETS PC */}
+            {/* =======================================================
+                LADO IZQUIERDO: LOGO + INDICADORES FINANCIEROS
+               ======================================================= */}
             <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-start">
                 
                 {/* LOGO */}
@@ -49,10 +58,8 @@ export function Navbar() {
                     </h1>
                 </Link>
 
-                {/* WIDGETS (PC) - SEPARADOR VERTICAL */}
+                {/* INDICADORES (SOLO PC) */}
                 <div className="hidden md:flex items-center gap-4 border-l pl-6 border-gray-200 dark:border-slate-800 h-8">
-                    
-                    {/* JUS */}
                     <div className="flex flex-col justify-center">
                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
                             Unidad JUS
@@ -62,41 +69,53 @@ export function Navbar() {
                         </span>
                     </div>
 
-                    {/* DÓLAR */}
                     <div className="flex flex-col justify-center">
-                         <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1">
                             <TrendingUp className="h-3 w-3" /> Blue Venta
-                         </span>
-                         <span className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300 leading-none">
+                          </span>
+                          <span className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300 leading-none">
                             {dolar ? `$ ${Math.floor(dolar.venta).toLocaleString("es-AR")}` : "..."}
-                         </span>
+                          </span>
                     </div>
                 </div>
             </div>
 
-            {/* LADO DERECHO: BUSCADOR + FECHA + TOGGLE + LOGOUT */}
-            <div className="flex items-center gap-4">
+            {/* =======================================================
+                LADO DERECHO: HERRAMIENTAS + USUARIO
+               ======================================================= */}
+            <div className="flex items-center gap-3">
                 
-                {/* WIDGETS (MOVIL) */}
+                {/* INDICADORES (MOVIL) */}
                 <div className="flex md:hidden items-center gap-2 mr-auto sm:mr-0">
                       <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 px-1.5 py-0.5 rounded bg-gray-50 dark:bg-slate-900">
                         JUS ${Math.round(VALOR_JUS/1000)}k
                       </span>
-                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/30">
-                        US$ {dolar ? Math.floor(dolar.venta) : "-"}
-                      </span>
                 </div>
 
-                {/* 2. BUSCADOR GLOBAL */}
+                {/* 1. BUSCADOR GLOBAL */}
                 <div className="hidden md:block">
                     <GlobalSearch />
                 </div>
 
-                {/* 3. SEPARADOR (A la derecha del buscador) */}
-                <div className="hidden md:block h-8 w-px bg-gray-200 dark:bg-slate-800 mx-1"></div>
+                {/* 2. BOTÓN EQUIPO (FILTRADO POR ROL ADMIN) */}
+                {user?.role === "ADMIN" && (
+                    <Link href="/team">
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/team" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400" : ""}`}
+                        >
+                            <Users className="h-4 w-4" />
+                            <span className="hidden lg:inline">Equipo</span>
+                        </Button>
+                    </Link>
+                )}
 
-                {/* FECHA (PC) */}
-                <div className="text-right hidden lg:block border-r pr-4 border-gray-200 dark:border-slate-800 h-8">
+                {/* SEPARADOR PEQUEÑO */}
+                <div className="hidden md:block h-6 w-px bg-gray-200 dark:bg-slate-800 mx-1"></div>
+
+                {/* 3. FECHA (SOLO PC) */}
+                <div className="text-right hidden xl:block pr-2">
                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-end gap-1">
                         <CalendarDays className="h-3 w-3" /> Hoy es
                     </p>
@@ -105,10 +124,10 @@ export function Navbar() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* 4. CONTROLES FINALES */}
+                <div className="flex items-center gap-1 pl-2 border-l border-gray-200 dark:border-slate-800">
                     <ModeToggle />
                     
-                    {/* BOTÓN CERRAR SESIÓN */}
                     <form action={logout}>
                         <Button 
                             variant="ghost" 

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
+import bcrypt from "bcryptjs"; // 👈 Importante para el registro de usuarios
 
 // ==========================================
 // 🔐 AUTENTICACIÓN (LOGIN / LOGOUT)
@@ -11,9 +12,7 @@ import { AuthError } from "next-auth";
 
 export async function authenticate(prevState: string | undefined, formData: FormData) {
   try {
-    // 👇 EL CAMBIO MÁGICO: redirect: false
-    // Esto evita que el servidor redireccione, permitiendo que el cliente
-    // maneje el éxito y haga el refresco completo (window.location.href).
+    // 👇 redirect: false para permitir manejo en cliente (window.location.href)
     await signIn("credentials", {
       ...Object.fromEntries(formData),
       redirect: false, 
@@ -39,6 +38,55 @@ export async function logout() {
 }
 
 // ==========================================
+// 👥 GESTIÓN DE EQUIPO (REGISTER)
+// ==========================================
+
+export async function registerUser(prevState: any, formData: FormData) {
+  const name = formData.get("name") as string;
+  const email = formData.get("email") as string;
+  const passwordRaw = formData.get("password") as string;
+  const role = formData.get("role") as string || "USER"; 
+
+  if (!name || !email || !passwordRaw) {
+    return { error: "Faltan datos obligatorios." };
+  }
+
+  // 1. Verificar si ya existe
+  const existingUser = await db.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    return { error: "Este email ya está registrado." };
+  }
+
+  // 2. Encriptar contraseña
+  const hashedPassword = await bcrypt.hash(passwordRaw, 10);
+
+  // 3. Crear usuario
+  await db.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+      role,
+    },
+  });
+
+  revalidatePath("/team");
+  return { success: "Usuario creado correctamente." };
+}
+
+export async function deleteUser(formData: FormData) {
+    const id = formData.get("id") as string;
+    if (!id) return;
+    
+    // Opcional: Evitar borrar tu propio usuario o al admin principal aquí si quisieras
+    await db.user.delete({ where: { id } });
+    revalidatePath("/team");
+}
+
+// ==========================================
 // 👤 CLIENTES
 // ==========================================
 
@@ -46,7 +94,6 @@ export async function createClient(formData: FormData) {
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
   
-  // Helper para evitar guardar "EMPTY_SELECTION"
   const getVal = (key: string) => {
     const val = formData.get(key) as string;
     if (!val || val === "EMPTY_SELECTION") return null; 
@@ -165,7 +212,8 @@ export async function editCase(formData: FormData) {
   const caratula = formData.get("caratula") as string;
   const juzgado = formData.get("juzgado") as string;
   const code = formData.get("code") as string;
-  // Usamos string para evitar problemas de tipo con Prisma Enum
+  
+  // 👇 FIX: Usamos 'any' para evitar conflicto de tipos con Prisma Enum
   const status = formData.get("status") as any; 
   
   const totalFeeString = formData.get("totalFee") as string;
@@ -179,7 +227,6 @@ export async function editCase(formData: FormData) {
 
   if (!id) return;
 
-  // @ts-ignore (Status suele ser un Enum, ignoramos error de TS temporalmente si status viene como string)
   await db.case.update({
     where: { id },
     data: { 
