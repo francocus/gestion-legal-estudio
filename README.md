@@ -4,7 +4,7 @@ Plataforma web integral para la administración de estudios jurídicos, optimiza
 
 Centraliza la gestión de clientes, el seguimiento de causas judiciales y el control financiero del estudio, reemplazando planillas de Excel dispersas con una solución unificada y moderna.
 
-![Dashboard Principal](/screenshots/dashboard.png)
+![Dashboard Principal](public/screenshots/dashboard.png)
 *Vista general del estado financiero y la agenda prioritaria del estudio.*
 
 ---
@@ -16,7 +16,7 @@ Centraliza la gestión de clientes, el seguimiento de causas judiciales y el con
 * **Conexión con SISFE:** Acceso directo a la visualización de expedientes en el Poder Judicial de Santa Fe desde cada causa.
 * **Juzgados Locales:** Base de datos precargada con la nómina de juzgados de Rosario y Santa Fe.
 
-![Calculadora JUS](/screenshots/expediente-edit.png)
+![Calculadora JUS](public/screenshots/expediente-edit.png)
 *Módulo de cálculo automático de honorarios basado en el valor JUS actual.*
 
 ### Gestión Procesal y Financiera
@@ -24,7 +24,7 @@ Centraliza la gestión de clientes, el seguimiento de causas judiciales y el con
 * **Control de Caja:** Registro de ingresos y gastos por expediente. Visualización gráfica del progreso de cobro de honorarios.
 * **Agenda Inteligente:** Alertas visuales de plazos fatales y audiencias próximas.
 
-![Detalle de Expediente](/screenshots/expediente.png)
+![Detalle de Expediente](public/screenshots/expediente.png)
 *Vista de detalle con seguimiento de cobros y próximos vencimientos.*
 
 ---
