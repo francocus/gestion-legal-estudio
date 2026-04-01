@@ -1,13 +1,28 @@
 "use client";
 
+import { CaseStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 // 👇 IMPORTACIÓN DE ICONOS
 import { FileDown } from "lucide-react";
 
 interface PdfButtonProps {
-  client: any;
-  legalCase: any;
+  client: {
+    firstName: string;
+    lastName: string;
+    dni: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+  };
+  legalCase: {
+    caratula: string;
+    code: string | null;
+    juzgado: string | null;
+    area: string;
+    status: CaseStatus;
+    description: string | null;
+  };
   stats: {
     totalIncome: number;
     totalFee: number;
@@ -85,7 +100,7 @@ export function PdfButton({ client, legalCase, stats }: PdfButtonProps) {
     doc.text(`Fuero: ${legalCase.area || "CIVIL"}`, margin, y);
     y += 7;
     
-    const statusMap: any = { ACTIVE: "En Tramite", MEDIATION: "Mediacion", ARCHIVED: "Archivado" };
+    const statusMap: Record<CaseStatus, string> = { ACTIVE: "En Tramite", MEDIATION: "Mediacion", ARCHIVED: "Archivado" };
     doc.text(`Estado: ${statusMap[legalCase.status] || legalCase.status}`, margin, y);
     y += 15;
 

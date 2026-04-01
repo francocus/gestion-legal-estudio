@@ -19,9 +19,20 @@ import { DollarSign, Users, Scale, TrendingUp } from "lucide-react";
 // Colores para el gráfico de torta (Fueros)
 const COLORS = ['#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#6366f1', '#64748b'];
 
+interface FinancialDatum {
+  name: string;
+  ingresos: number;
+  gastos: number;
+}
+
+interface AreaDatum {
+  name: string;
+  value: number;
+}
+
 interface ReportsProps {
-  financialData: any[]; // Datos para barras (Mes, Ingreso, Gasto)
-  areaData: any[];      // Datos para torta (Fuero, Cantidad)
+  financialData: FinancialDatum[]; // Datos para barras (Mes, Ingreso, Gasto)
+  areaData: AreaDatum[];      // Datos para torta (Fuero, Cantidad)
   kpi: {
     totalActive: number;
     totalClients: number;

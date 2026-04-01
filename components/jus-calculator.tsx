@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calculator, ArrowRightLeft, RefreshCcw } from "lucide-react";
+import { Calculator, ArrowRightLeft } from "lucide-react";
 
 interface Props {
   valorJus: number;

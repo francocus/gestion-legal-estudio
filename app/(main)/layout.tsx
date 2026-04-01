@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db"; // Necesario para buscar el rol
+import { db } from "@/lib/db";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 
@@ -12,20 +12,26 @@ export default async function MainLayout({
   // 1. Verificamos la sesión
   const session = await auth();
 
-  // 2. Si no hay usuario logueado, lo mandamos al login
-  if (!session?.user?.email) {
+  // 2. Validaciones súper estrictas: Si no hay sesión, usuario, o email, afuera.
+  if (!session || !session.user || !session.user.email) {
     redirect("/login");
   }
 
-  // 3. Buscamos el usuario completo en la base de datos
-  // Hacemos esto para obtener el campo 'role' (ADMIN o USER)
+  // 3. Buscamos el usuario completo en la base de datos de forma segura
   const user = await db.user.findUnique({
-    where: { email: session.user.email }
+    where: { 
+      email: session.user.email 
+    }
   });
+
+  // 4. DOBLE CHEQUEO: Si tiene sesión en el navegador pero lo borramos de la DB
+  if (!user) {
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* 4. Le pasamos el usuario a la Navbar para que filtre botones */}
+      {/* 5. Le pasamos el usuario a la Navbar para que filtre botones (ej: Panel Admin) */}
       <Navbar user={user} />
       
       <main className="flex-1">

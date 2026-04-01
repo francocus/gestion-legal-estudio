@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createEvent } from "@/app/actions";
+import { createAgendaEvent } from "@/lib/actions/agenda";
 // 👇 IMPORTACIÓN DE ICONOS
 import { CalendarPlus, Zap, Gavel, Users, Save } from "lucide-react";
 
@@ -31,16 +31,23 @@ interface Props {
 export function CreateEventDialog({ caseId, clientId }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     
     const formData = new FormData(e.currentTarget);
     formData.append("caseId", caseId);
     formData.append("clientId", clientId);
     
-    await createEvent(formData);
+    const result = await createAgendaEvent(formData);
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
     
     setLoading(false);
     setOpen(false);
@@ -132,6 +139,8 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
                 </>
             )}
           </Button>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
         </form>
       </DialogContent>

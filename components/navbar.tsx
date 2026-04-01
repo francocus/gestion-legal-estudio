@@ -2,145 +2,143 @@
 
 import { usePathname } from "next/navigation";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Button } from "@/components/ui/button"; 
-import { logout } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { logout } from "@/lib/actions/auth";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { GlobalSearch } from "@/components/global-search";
 
-// 👇 IMPORTACIÓN DE ICONOS
-import { 
-  Scale, 
-  LogOut, 
-  CalendarDays, 
-  TrendingUp,
-  Users
+import {
+    Scale,
+    LogOut,
+    CalendarDays,
+    Users,
+    BookOpen,
+    Calendar,
+    Wallet,
+    Home
 } from "lucide-react";
 
-// Definimos la interfaz para las propiedades de la Navbar
 interface NavbarProps {
-  user: any; // El usuario que viene desde el MainLayout
+    user: {
+        role?: string;
+    } | null;
 }
 
 export function Navbar({ user }: NavbarProps) {
-  const pathname = usePathname();
-  const [dolar, setDolar] = useState<{ compra: number; venta: number } | null>(null);
+    const pathname = usePathname();
 
-  useEffect(() => {
-    fetch("https://dolarapi.com/v1/dolares/blue")
-      .then((res) => res.json())
-      .then((data) => setDolar(data))
-      .catch((err) => console.error("Error dólar:", err));
-  }, []);
+    if (pathname === "/login") return null;
+    if (pathname === "/register") return null;
 
-  // Ocultamos la Navbar en las rutas de acceso
-  if (pathname === "/login") return null;
-  if (pathname === "/register") return null;
+    const today = new Date();
+    const day = today.getDate();
+    const monthRaw = today.toLocaleString('es-AR', { month: 'short' }).replace('.', '');
+    const month = monthRaw.charAt(0).toUpperCase() + monthRaw.slice(1);
+    const year = today.getFullYear();
+    const displayDate = `${day} ${month} ${year}`;
 
-  const VALOR_JUS = 118048.44; 
+    return (
+        <nav className="w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+            <div className="w-full px-6 h-16 flex items-center justify-between gap-4">
 
-  return (
-     <nav className="w-full border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 sticky top-0 z-50">
-        <div className="w-full px-6 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0">
-            
-            {/* =======================================================
-                LADO IZQUIERDO: LOGO + INDICADORES FINANCIEROS
-               ======================================================= */}
-            <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-start">
-                
-                {/* LOGO */}
-                <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-2 group">
-                    <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors">
-                        <Scale className="h-5 w-5" />
-                    </div>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                        Estudio Jurídico
-                    </h1>
-                </Link>
-
-                {/* INDICADORES (SOLO PC) */}
-                <div className="hidden md:flex items-center gap-4 border-l pl-6 border-gray-200 dark:border-slate-800 h-8">
-                    <div className="flex flex-col justify-center">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                            Unidad JUS
-                        </span>
-                        <span className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 leading-none">
-                            $ {VALOR_JUS.toLocaleString("es-AR", { maximumFractionDigits: 0 })}
-                        </span>
-                    </div>
-
-                    <div className="flex flex-col justify-center">
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" /> Blue Venta
-                          </span>
-                          <span className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-300 leading-none">
-                            {dolar ? `$ ${Math.floor(dolar.venta).toLocaleString("es-AR")}` : "..."}
-                          </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* =======================================================
-                LADO DERECHO: HERRAMIENTAS + USUARIO
-               ======================================================= */}
-            <div className="flex items-center gap-3">
-                
-                {/* INDICADORES (MOVIL) */}
-                <div className="flex md:hidden items-center gap-2 mr-auto sm:mr-0">
-                      <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 px-1.5 py-0.5 rounded bg-gray-50 dark:bg-slate-900">
-                        JUS ${Math.round(VALOR_JUS/1000)}k
-                      </span>
-                </div>
-
-                {/* 1. BUSCADOR GLOBAL */}
-                <div className="hidden md:block">
-                    <GlobalSearch />
-                </div>
-
-                {/* 2. BOTÓN EQUIPO (FILTRADO POR ROL ADMIN) */}
-                {user?.role === "ADMIN" && (
-                    <Link href="/team">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/team" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400" : ""}`}
-                        >
-                            <Users className="h-4 w-4" />
-                            <span className="hidden lg:inline">Equipo</span>
-                        </Button>
+                {/* 1. LADO IZQUIERDO: LOGO */}
+                <div className="flex items-center shrink-0">
+                    <Link href="/" className="hover:opacity-80 transition-opacity flex items-center gap-2 group">
+                        <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm group-hover:bg-blue-700 transition-colors">
+                            <Scale className="h-5 w-5" />
+                        </div>
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                            Estudio Jurídico
+                        </h1>
                     </Link>
-                )}
-
-                {/* SEPARADOR PEQUEÑO */}
-                <div className="hidden md:block h-6 w-px bg-gray-200 dark:bg-slate-800 mx-1"></div>
-
-                {/* 3. FECHA (SOLO PC) */}
-                <div className="text-right hidden xl:block pr-2">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-end gap-1">
-                        <CalendarDays className="h-3 w-3" /> Hoy es
-                    </p>
-                    <p className="text-sm font-medium capitalize text-gray-700 dark:text-gray-200 leading-none mt-0.5">
-                        {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </p>
                 </div>
 
-                {/* 4. CONTROLES FINALES */}
-                <div className="flex items-center gap-1 pl-2 border-l border-gray-200 dark:border-slate-800">
-                    <ModeToggle />
-                    
-                    <form action={logout}>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full w-9 h-9"
-                            title="Cerrar Sesión"
-                        >
-                            <LogOut className="h-4 w-4" />
-                        </Button>
-                    </form>
+                {/* 2. CENTRO: BUSCADOR GIGANTE */}
+                <div className="hidden md:block flex-1 px-6">
+                    <div className="w-full">
+                        <GlobalSearch />
+                    </div>
+                </div>
+
+                {/* 3. LADO DERECHO: NAVEGACIÓN Y CONTROLES */}
+                <div className="flex items-center shrink-0">
+
+                    {/* Botones de Navegación */}
+                    <div className="flex items-center gap-1">
+                        <Link href="/">
+                            <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                                <Home className="h-4 w-4" />
+                                <span className="hidden lg:inline">Inicio</span>
+                            </Button>
+                        </Link>
+
+                        {/* SEPARADOR */}
+                        <div className="hidden md:block h-6 w-px bg-slate-300 dark:bg-slate-700 mx-3"></div>
+
+                        <Link href="/agenda">
+                            <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/agenda" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                                <Calendar className="h-4 w-4" />
+                                <span className="hidden lg:inline">Agenda</span>
+                            </Button>
+                        </Link>
+
+                        <Link href="/biblioteca">
+                            <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/biblioteca" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                                <BookOpen className="h-4 w-4" />
+                                <span className="hidden lg:inline">Biblioteca</span>
+                            </Button>
+                        </Link>
+
+                        <Link href="/contabilidad">
+                            <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/contabilidad" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                                <Wallet className="h-4 w-4" />
+                                <span className="hidden lg:inline">Contabilidad</span>
+                            </Button>
+                        </Link>
+
+                        {user?.role === "ADMIN" && (
+                            <Link href="/team">
+                                <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/team" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                                    <Users className="h-4 w-4" />
+                                    <span className="hidden lg:inline">Equipo</span>
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+
+                    {/* SEPARADOR */}
+                    <div className="hidden md:block h-6 w-px bg-slate-300 dark:bg-slate-700 mx-3"></div>
+
+                    {/* Fecha limpia */}
+                    <div className="text-right hidden xl:block pr-1">
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest flex items-center justify-end gap-1">
+                            <CalendarDays className="h-3 w-3" /> Hoy
+                        </p>
+                        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-none mt-1">
+                            {displayDate}
+                        </p>
+                    </div>
+
+                    {/* SEPARADOR */}
+                    <div className="hidden md:block h-6 w-px bg-slate-300 dark:bg-slate-700 mx-3"></div>
+
+                    {/* Controles del Usuario */}
+                    <div className="flex items-center gap-1">
+                        <ModeToggle />
+                        <form action={logout}>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full w-9 h-9 transition-colors"
+                                title="Cerrar Sesión"
+                            >
+                                <LogOut className="h-4 w-4" />
+                            </Button>
+                        </form>
+                    </div>
+
                 </div>
             </div>
-        </div>
-     </nav>
-  );
+        </nav>
+    );
 }

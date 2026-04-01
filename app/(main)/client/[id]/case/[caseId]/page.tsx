@@ -1,21 +1,19 @@
 import { PdfButton } from "@/components/pdf-button";
 import { EditCaseDialog } from "@/components/edit-case-dialog";
 import { DeleteButton } from "@/components/delete-button";
-import { CreateTransactionDialog } from "@/components/create-transaction-dialog";
 import { CreateEventDialog } from "@/components/create-event-dialog";
 import { CreateMovementDialog } from "@/components/create-movement-dialog";
+import { CaseNotesPanel } from "@/components/case-notes-panel";
+import { AccountingPanel } from "@/components/accounting-panel"; // 👈 IMPORTAMOS EL PANEL NUEVO
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { WhatsAppActions } from "@/components/whatsapp-actions";
 import Link from "next/link";
 
-// 👇 IMPORTACIÓN UNIFICADA DE ICONOS PROFESIONALES
 import { 
   Gavel, 
   DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
   ClipboardList, 
   Clock, 
   CalendarDays,
@@ -23,13 +21,11 @@ import {
   ChevronLeft,
   Mail,
   MapPin,
-  FileText,
   Users,
   StickyNote,
   Zap,
-  Wallet,
-  AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  NotebookPen
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +40,7 @@ interface PageProps {
 export default async function CasePage({ params }: PageProps) {
   const { id, caseId } = await params;
 
-  // 1. BUSCAR DATOS EN BASE DE DATOS
+  // 1. TRAEMOS EL CASO (Sin las transactions viejas)
   const legalCase = await db.case.findUnique({
     where: { id: caseId },
     include: {
@@ -56,33 +52,32 @@ export default async function CasePage({ params }: PageProps) {
         movements: {
             orderBy: { date: 'desc' }
         },
-        transactions: { orderBy: { date: 'desc' } } 
+        notes: { orderBy: { createdAt: 'desc' } }
     }
   });
 
   if (!legalCase) return notFound();
 
-  // 2. CÁLCULOS
-  const totalIncome = legalCase.transactions
-    .filter(t => t.type === 'INCOME')
-    .reduce((sum, t) => sum + t.amount, 0);
+  // 2. TRAEMOS LA CAJA CHICA DEL EXPEDIENTE (El nuevo modelo)
+  const movimientosDelCaso = await db.accountEntry.findMany({
+    where: { caseId: caseId },
+    orderBy: { date: "desc" },
+  });
 
-  const totalExpense = legalCase.transactions
-    .filter(t => t.type === 'EXPENSE')
-    .reduce((sum, t) => sum + t.amount, 0);
-
+  // 3. RECALCULAMOS TOTALES PARA EL BOTÓN PDF
+  const totalIncome = movimientosDelCaso.reduce((sum, t) => sum + (t.haber || 0), 0);
+  const totalExpense = movimientosDelCaso.reduce((sum, t) => sum + (t.debe || 0), 0);
   const balance = totalIncome - totalExpense;
 
-  // 3. RENDERIZADO
   return (
-    <div className="w-full p-6 space-y-6">
+    <div className="w-full p-6 space-y-6 max-w-[1600px] mx-auto">
       
       {/* NAVEGACIÓN */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4">
         <Link href={`/client/${id}`} className="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             <ChevronLeft className="h-4 w-4" /> Volver al Cliente
         </Link>
-        <span className="text-gray-300 dark:text-gray-700">/</span>
+        <span className="text-slate-300 dark:text-slate-700">/</span>
         <span className="font-semibold text-slate-900 dark:text-slate-200">Expediente {legalCase.code}</span>
       </div>
 
@@ -103,20 +98,15 @@ export default async function CasePage({ params }: PageProps) {
             </div>
             
             <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-                 {/* BLOQUE DE BOTONES DE DOCUMENTACIÓN */}
                  <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                      <PdfButton 
                         client={legalCase.client} 
                         legalCase={legalCase} 
                         stats={{ totalIncome, totalFee: legalCase.totalFee || 0, balance }}
                      />
-                     
                  </div>
-
-                 {/* BLOQUE DE EDICIÓN Y LINK */}
                  <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
                      <EditCaseDialog legalCase={legalCase} />
-                     
                      {legalCase.driveLink && (
                          <a 
                             href={legalCase.driveLink} 
@@ -139,7 +129,6 @@ export default async function CasePage({ params }: PageProps) {
              }`}>
                 {legalCase.status === 'ACTIVE' ? 'En Trámite' : legalCase.status === 'MEDIATION' ? 'Mediación' : 'Archivado'}
              </span>
-
              {legalCase.area && (
                 <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-1 rounded border dark:border-slate-700 uppercase">
                     {legalCase.area}
@@ -187,140 +176,105 @@ export default async function CasePage({ params }: PageProps) {
           )}
       </div>
 
-      {/* FINANZAS Y CONTACTO */}
+      {/* REORGANIZACIÓN: CONTACTO Y DESCRIPCIÓN LADO A LADO */}
       <div className="grid md:grid-cols-2 gap-6">
-        
-        {/* CAJA / HONORARIOS */}
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-6 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-emerald-800 dark:text-emerald-300 font-bold text-lg flex items-center gap-2">
-                    <DollarSign className="h-5 w-5" /> Honorarios y Pagos
+        {/* FICHA CLIENTE */}
+        <Card className="dark:bg-slate-900 dark:border-slate-800 overflow-hidden shadow-sm h-full">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-800">
+                <h3 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5" /> Información de Contacto
                 </h3>
-                <CreateTransactionDialog caseId={caseId} clientId={id} />
             </div>
-
-            {legalCase.totalFee && legalCase.totalFee > 0 ? (
-                <div className="mb-6 bg-white dark:bg-slate-900 p-5 rounded-xl border border-emerald-100 dark:border-slate-800 shadow-sm">
-                    <div className="flex justify-between text-sm mb-2">
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">Progreso de Cobro</span>
-                        <span className="font-bold text-emerald-600">
-                            {Math.round((totalIncome / legalCase.totalFee) * 100)}%
-                        </span>
+            <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">
+                        {legalCase.client.firstName[0]}{legalCase.client.lastName[0]}
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 mb-4 overflow-hidden">
-                        <div 
-                            className="bg-emerald-500 h-full transition-all duration-700 ease-out" 
-                            style={{ width: `${Math.min((totalIncome / legalCase.totalFee) * 100, 100)}%` }}
-                        ></div>
-                    </div>
-                    <div className="flex justify-between">
-                        <div>
-                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Abonado</p>
-                            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">$ {totalIncome.toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Saldo Pendiente</p>
-                            <p className={`text-xl font-bold ${balance >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-500'}`}>
-                                $ {(legalCase.totalFee - totalIncome).toLocaleString()}
-                            </p>
-                        </div>
+                    <div>
+                        <p className="font-bold text-xl text-slate-900 dark:text-white">
+                            {legalCase.client.lastName}, {legalCase.client.firstName}
+                        </p>
+                        <p className="text-xs text-slate-500 font-mono">DNI: {legalCase.client.dni || "---"}</p>
                     </div>
                 </div>
-            ) : (
-                <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg text-center text-amber-700 dark:text-amber-400 text-sm italic flex flex-col items-center gap-1">
-                    <AlertTriangle className="h-5 w-5 mb-1" />
-                    <span>Sin honorarios pactados. Edite el caso para cargar el presupuesto.</span>
-                </div>
-            )}
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-emerald-100 dark:border-slate-800 overflow-hidden">
-                {legalCase.transactions.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-xs italic flex flex-col items-center gap-2">
-                        <Wallet className="h-6 w-6 opacity-30" />
-                        No hay movimientos de dinero.
-                    </div>
-                ) : (
-                    <div className="divide-y dark:divide-slate-800">
-                        {legalCase.transactions.map((tx) => (
-                            <div key={tx.id} className="p-3 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 group transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-1.5 rounded-full ${tx.type === 'INCOME' ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                                        {tx.type === 'INCOME' ? <TrendingUp className="h-3 w-3 text-emerald-600" /> : <TrendingDown className="h-3 w-3 text-red-600" />}
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{tx.description}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`text-sm font-bold font-mono ${tx.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                                        {tx.type === 'INCOME' ? '+' : '-'} ${tx.amount.toLocaleString()}
-                                    </span>
-                                    <DeleteButton id={tx.id} type="TRANSACTION" clientId={id} caseId={caseId} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
-
-        {/* FICHA CLIENTE Y NOTAS */}
-        <div className="space-y-6">
-            <Card className="dark:bg-slate-900 dark:border-slate-800 overflow-hidden shadow-sm">
-                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border-b dark:border-slate-800">
-                    <h3 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5" /> Información de Contacto
-                    </h3>
-                </div>
-                <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">
-                            {legalCase.client.firstName[0]}{legalCase.client.lastName[0]}
+                <div className="space-y-4">
+                    {legalCase.client.phone ? (
+                        <WhatsAppActions client={legalCase.client} legalCase={legalCase} />
+                    ) : (
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-400 text-xs italic border border-dashed border-slate-200 dark:border-slate-700">
+                            Sin teléfono de contacto.
                         </div>
-                        <div>
-                            <p className="font-bold text-xl text-slate-900 dark:text-white">
-                                {legalCase.client.lastName}, {legalCase.client.firstName}
-                            </p>
-                            <p className="text-xs text-slate-500 font-mono">DNI: {legalCase.client.dni || "---"}</p>
-                        </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-4">
-                        {legalCase.client.phone ? (
-                            <WhatsAppActions client={legalCase.client} legalCase={legalCase} />
-                        ) : (
-                            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-400 text-xs italic border border-dashed border-slate-200 dark:border-slate-700">
-                                Sin teléfono de contacto.
+                    <div className="grid gap-3 text-sm border-t dark:border-slate-800 pt-4">
+                        {legalCase.client.email && (
+                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg truncate">
+                                <Mail className="h-4 w-4 text-blue-500 shrink-0" /> {legalCase.client.email}
                             </div>
                         )}
-
-                        <div className="grid gap-3 text-sm border-t dark:border-slate-800 pt-4">
-                            {legalCase.client.email && (
-                                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg truncate">
-                                    <Mail className="h-4 w-4 text-blue-500 shrink-0" /> {legalCase.client.email}
-                                </div>
-                            )}
-                            {legalCase.client.address && (
-                                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg">
-                                    <MapPin className="h-4 w-4 text-red-500 shrink-0" /> {legalCase.client.address}
-                                </div>
-                            )}
-                        </div>
+                        {legalCase.client.address && (
+                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg">
+                                <MapPin className="h-4 w-4 text-red-500 shrink-0" /> {legalCase.client.address}
+                            </div>
+                        )}
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </CardContent>
+        </Card>
 
-            <div className="bg-amber-50 dark:bg-slate-900 border border-amber-100 dark:border-slate-800 rounded-xl p-6 shadow-sm">
-                 <h3 className="text-amber-800 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <StickyNote className="h-4 w-4 text-amber-500" /> Notas Internas
-                 </h3>
-                 {legalCase.description ? (
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                        {legalCase.description}
-                    </p>
-                 ) : (
-                    <p className="text-xs text-slate-400 italic">No hay observaciones cargadas.</p>
-                 )}
-            </div>
+        {/* DESCRIPCIÓN DEL CASO */}
+        <div className="bg-amber-50 dark:bg-slate-900 border border-amber-100 dark:border-slate-800 rounded-xl p-6 shadow-sm h-full">
+            <h3 className="text-amber-800 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-amber-500" /> Descripción del Caso
+            </h3>
+            {legalCase.description ? (
+                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {legalCase.description}
+                </p>
+            ) : (
+                <p className="text-sm text-slate-400 italic">No hay descripción detallada guardada para este expediente.</p>
+            )}
         </div>
+      </div>
+
+      {/* ====================================================== */}
+      {/* NUEVO MÓDULO FINANCIERO (FULL WIDTH)                     */}
+      {/* ====================================================== */}
+      <div className="mt-8 border-t border-slate-200 dark:border-slate-800 pt-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+            <DollarSign className="h-6 w-6 text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 p-1 rounded-md" />
+            Caja Chica y Honorarios
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Gestión financiera exclusiva de este expediente. Estos montos impactan automáticamente en la caja general del estudio.
+          </p>
+        </div>
+        
+        <AccountingPanel 
+          initialEntries={movimientosDelCaso} 
+          caseId={caseId} 
+          showCaseColumn={false} 
+        />
+      </div>
+
+      {/* MÓDULO DE NOTAS E IDEAS */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-6 border-b dark:border-slate-800 pb-4">
+          <NotebookPen className="h-6 w-6 text-amber-500" />
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+            Notas e Ideas
+          </h3>
+          <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold px-2 py-0.5 rounded-full">
+            {legalCase.notes.length}
+          </span>
+        </div>
+        <CaseNotesPanel
+          caseId={legalCase.id}
+          clientId={id}
+          initialNotes={legalCase.notes}
+        />
       </div>
 
       {/* LÍNEA DE TIEMPO / MOVIMIENTOS */}
@@ -341,7 +295,6 @@ export default async function CasePage({ params }: PageProps) {
             ) : (
                 legalCase.movements.map((mov) => (
                     <div key={mov.id} className="relative group">
-                        {/* El punto de la línea de tiempo */}
                         <div className="absolute -left-[41px] top-6 w-5 h-5 rounded-full bg-blue-500 border-4 border-white dark:border-slate-950 shadow-md transition-transform group-hover:scale-125 z-10"></div>
                         
                         <Card className="hover:shadow-lg transition-all dark:bg-slate-900 dark:border-slate-800 overflow-hidden">

@@ -6,20 +6,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createTransaction } from "@/app/actions";
+import { createTransaction } from "@/lib/actions/transactions";
 // 👇 IMPORTACIÓN DE ICONOS
 import { DollarSign, TrendingUp, TrendingDown, Save } from "lucide-react";
 
 export function CreateTransactionDialog({ caseId, clientId }: { caseId: string, clientId: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
+    setError(null);
     formData.append("caseId", caseId);
     formData.append("clientId", clientId);
     
-    await createTransaction(formData);
+    const result = await createTransaction(formData);
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
     
     setLoading(false);
     setOpen(false);
@@ -101,6 +108,8 @@ export function CreateTransactionDialog({ caseId, clientId }: { caseId: string, 
                 </>
             )}
           </Button>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
         </form>
       </DialogContent>

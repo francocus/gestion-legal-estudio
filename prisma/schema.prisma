@@ -3,65 +3,69 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // 1. EL CLIENTE
 model Client {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   
   // --- IDENTIFICACIÓN OBLIGATORIA ---
   firstName   String
   lastName    String
   
   // Documento (Tipo y Número)
-  docType     String   @default("DNI") // DNI, LE, LC, PAS, CI, CF
-  dni         String?  @unique         // El número del documento
+  docType     String    @default("DNI") // DNI, LE, LC, PAS, CI, CF
+  dni         String?   @unique         // El número del documento
   
   // --- DATOS ADICIONALES (Opcionales) ---
-  cuit        String?  @unique         // CUIT/CUIL
-  gender      String?  // Sexo
+  cuit        String?   @unique         // CUIT/CUIL
+  gender      String?   // Sexo
   birthDate   DateTime? // Fecha de nacimiento
   birthPlace  String?   // Lugar de nacimiento
   nationality String?   @default("Argentina")
-  occupation  String?   // Ocupación (reemplaza a job)
+  occupation  String?   // Ocupación
   civilStatus String?
   
   // --- UBICACIÓN Y CONTACTO ---
   address     String?   // Calle y altura
-  location    String?   // Ciudad (Lista de Santa Fe)
+  location    String?   // Ciudad
   email       String?
   phone       String?   // Teléfono principal
   familyPhone String?   // Teléfono de urgencia/familiar
 
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   cases       Case[]
 }
 
-// 2. EL EXPEDIENTE / CASO
+// 2. EL EXPEDIENTE / CASO / CARPETA ADMINISTRATIVA
 model Case {
-  id          String      @id @default(cuid())
-  code        String
-  caratula    String
-  juzgado     String
-  description String?
-  status      CaseStatus  @default(ACTIVE)
-  totalFee    Int?     @default(0)
-  driveLink   String?
-  area        String   @default("CIVIL")
+  id              String         @id @default(cuid())
+  code            String?        // <-- AHORA ES OPCIONAL
+  caratula        String
+  juzgado         String?        // <-- AHORA ES OPCIONAL
+  description     String?
+  status          CaseStatus     @default(ACTIVE)
+  isExtrajudicial Boolean        @default(false) // <-- NUEVO: Diferencia juicios de trámites/inmobiliaria
+  totalFee        Int?           @default(0)
+  driveLink       String?
+  area            String         @default("CIVIL")
   
-  clientId    String
-  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   
-  events      Event[]     // Agenda
-  movements   Movement[]  // Historial del Juicio
-  transactions Transaction[]
+  events          Event[]        // Agenda
+  movements       Movement[]     // Historial
+  transactions    Transaction[]
+  notes           Note[]
+  entries         AccountEntry[]
   
-  createdAt   DateTime    @default(now())
+  createdAt       DateTime       @default(now())
 }
 
-// 3. LA AGENDA
+// 3. LA AGENDA UNIFICADA
 model Event {
   id          String    @id @default(cuid())
   title       String
@@ -70,11 +74,12 @@ model Event {
   description String?
   isDone      Boolean   @default(false)
 
-  caseId      String
-  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  // AL HACERLO OPCIONAL (?), PERMITIMOS EVENTOS PERSONALES/RUTINA
+  caseId      String?
+  case        Case?     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
-// 4. HISTORIAL / MOVIMIENTOS (Este es el que vale ahora)
+// 4. HISTORIAL / MOVIMIENTOS
 model Movement {
   id          String   @id @default(cuid())
   title       String   // Ej: "Cédula recibida"
@@ -94,9 +99,15 @@ enum CaseStatus {
 }
 
 enum EventType {
+  // Judiciales / Profesionales
   HEARING
   DEADLINE
   MEETING
+  // Personales / Rutina (Nuevos)
+  PERSONAL
+  MEDICAL
+  SOCIAL
+  OTHER
 }
 
 model Transaction {
@@ -119,4 +130,60 @@ model User {
   role      String   @default("ADMIN") // Por si después querés empleados con menos permisos
   
   createdAt DateTime @default(now())
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  type      String   @default("TEXT") // "TEXT" o "VOICE"
+  createdAt DateTime @default(now())
+
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+// LIBRO CONTABLE — ENTRADA DE DEBE/HABER
+model AccountEntry {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  description String
+  concept     String   // Ej: "Honorarios", "Gastos bancarios", "Sueldo", etc.
+  debe        Float    @default(0) // Egreso / Pasivo
+  haber       Float    @default(0) // Ingreso / Activo
+  
+  // Relación OPCIONAL con expediente (null = entrada general del estudio)
+  caseId      String?
+  case        Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime @default(now())
+}
+
+// 6. BIBLIOTECA JURÍDICA (Leyes, Códigos, Fallos)
+model LegalSource {
+  id              String   @id @default(cuid())
+  title           String   // Ej: "Ley de Contrato de Trabajo N° 20.744" o "Fallo CSJN..."
+  type            LegalSourceType
+  area            String   // Ej: "CIVIL", "PENAL", "LABORAL", "COMERCIAL"
+  country         String   @default("Argentina")
+  
+  content         String   // El texto completo o extracto principal
+  sourceUrl       String?  // Link oficial (ej. InfoLeg, CSJN)
+  publicationDate DateTime? // Fecha de sanción o del fallo
+  
+  // --- PREPARACIÓN PARA EL MÓDULO DE IA ---
+  lastAiCheck     DateTime? // Cuándo fue la última vez que el bot revisó si hay cambios
+  isOutdated      Boolean   @default(false) // Se pone en true si la IA detecta una modificatoria
+  previousText    String?   // Acá la IA guardará "la idea de los perros que legislaron" (texto derogado)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Opciones de tipo de documento legal
+enum LegalSourceType {
+  LAW           // Leyes Especiales
+  CODE          // Códigos (Fondo y Forma)
+  CONSTITUTION  // Constituciones
+  JURISPRUDENCE // Fallos / CIAJ
+  OTHER         // Otros documentos
 }

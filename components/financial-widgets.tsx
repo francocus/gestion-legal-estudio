@@ -8,8 +8,7 @@ async function getDolarBlue() {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (error) {
-    console.error("Error al obtener dolar", error);
+  } catch {
     return null;
   }
 }

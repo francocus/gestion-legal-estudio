@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Case" ADD COLUMN     "isExtrajudicial" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "code" DROP NOT NULL,
+ALTER COLUMN "juzgado" DROP NOT NULL;

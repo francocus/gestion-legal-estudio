@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { deleteUser } from "@/app/actions";
+import { deleteUser } from "@/lib/actions/users";
 // 👇 Importamos el componente nuevo
 import { CreateUserForm } from "@/components/create-user-form"; 
 import { Button } from "@/components/ui/button";

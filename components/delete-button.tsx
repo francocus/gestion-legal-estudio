@@ -1,13 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { 
-  deleteClient, 
-  deleteCase, 
-  deleteEvent, 
-  deleteTransaction, 
-  deleteMovement 
-} from "@/app/actions";
+import { deleteAgendaEvent } from "@/lib/actions/agenda";
+import { deleteClient } from "@/lib/actions/clients";
+import { deleteCase } from "@/lib/actions/cases";
+import { deleteMovement } from "@/lib/actions/movements";
+import { deleteTransaction } from "@/lib/actions/transactions";
 
 interface Props {
   id: string;
@@ -22,7 +20,7 @@ export function DeleteButton({ id, type, clientId, caseId }: Props) {
   const actions = {
     CLIENT: deleteClient,
     CASE: deleteCase,
-    EVENT: deleteEvent,
+    EVENT: deleteAgendaEvent,
     TRANSACTION: deleteTransaction,
     MOVEMENT: deleteMovement,
   };

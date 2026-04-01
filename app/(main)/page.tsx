@@ -4,343 +4,436 @@ import { SearchInput } from "@/components/search-input";
 import { DeleteButton } from "@/components/delete-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { FinancialWidgets } from "@/components/financial-widgets";
 import { AreaFilter } from "@/components/area-filter";
 import { Button } from "@/components/ui/button";
 
-// 👇 IMPORTACIÓN DE ICONOS
 import { 
-  Users, 
-  Briefcase, 
-  ShieldAlert, 
-  HeartHandshake, 
-  FileText, 
-  LayoutGrid,
-  AlertCircle,
-  CalendarDays,
-  Clock,
-  CheckCircle2,
-  Phone,
-  Search,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Scale,
-  Wallet,
-  ArrowRight,
-  BarChart3,
-  Gavel
+  Users, CalendarDays, CheckCircle2, Phone,
+  TrendingUp, TrendingDown, Wallet, ArrowRight,
+  FolderOpen, Scale, Activity, AlertTriangle,
+  Zap, Clock, Gavel, BookOpen, ChevronRight,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{
-    q?: string;
-    area?: string;
-  }>;
+  searchParams: Promise<{ q?: string; area?: string }>;
 }
 
 export default async function Home({ searchParams }: PageProps) {
   
   const params = await searchParams;
   const query = params.q || ""; 
-  const area = params.area || undefined;
+  const area  = params.area || undefined;
 
-  // 1. Consulta de Clientes
+  // ─── MÉTRICAS ───────────────────────────────────────────────
+  const totalClients        = await db.client.count();
+  const judicialCases       = await db.case.count({ where: { status: 'ACTIVE', isExtrajudicial: false } });
+  const extrajudicialCases  = await db.case.count({ where: { status: 'ACTIVE', isExtrajudicial: true } });
+  const pendingEvents       = await db.event.count({ where: { isDone: false } });
+
+  // ─── FILTROS ────────────────────────────────────────────────
+  let caseCondition = {};
+  if (area === "EXTRAJUDICIAL") {
+    caseCondition = { cases: { some: { isExtrajudicial: true } } };
+  } else if (area) {
+    caseCondition = { cases: { some: { area, isExtrajudicial: false } } };
+  }
+
+  // ─── CLIENTES ───────────────────────────────────────────────
   const clients = await db.client.findMany({
     where: {
-        AND: [
-            {
-                OR: [
-                    { lastName: { contains: query, mode: 'insensitive' } },
-                    { firstName: { contains: query, mode: 'insensitive' } },
-                ]
-            },
-            area ? {
-                cases: {
-                    some: { area: area }
-                }
-            } : {}
-        ]
+      AND: [
+        { OR: [
+          { lastName:  { contains: query, mode: 'insensitive' } },
+          { firstName: { contains: query, mode: 'insensitive' } },
+        ]},
+        caseCondition
+      ]
     },
     orderBy: { createdAt: "desc" },
-    include: { 
-        cases: {
-            where: { status: 'ACTIVE' },
-            select: { area: true, status: true }
-        } 
-    }
+    include: { cases: { where: { status: 'ACTIVE' }, select: { area: true, status: true, isExtrajudicial: true } } }
   });
 
-  // 2. Consulta de Agenda
+  // ─── AGENDA ─────────────────────────────────────────────────
   const upcomingEvents = await db.event.findMany({
     where: { isDone: false },
-    orderBy: { date: "asc" }, 
-    take: 6, 
-    include: {
-        case: { include: { client: true } }
-    }
+    orderBy: { date: "asc" },
+    take: 8,
+    include: { case: { include: { client: true } } }
   });
 
-  // 3. Consulta de Finanzas
-  const allTransactions = await db.transaction.findMany({
+  // ─── CONTABILIDAD ───────────────────────────────────────────
+  const allAccountEntries = await db.accountEntry.findMany({
     orderBy: { date: 'desc' },
-    include: { case: true } 
+    include: { case: { select: { caratula: true, code: true } } }
   });
 
-  // --- CÁLCULOS FINANCIEROS BÁSICOS ---
-  const totalIngresos = allTransactions
-    .filter(t => t.type === "INCOME")
-    .reduce((acc, curr) => acc + curr.amount, 0);
+  const now              = new Date();
+  const startOfMonth     = new Date(now.getFullYear(), now.getMonth(), 1);
+  const entriesThisMonth = allAccountEntries.filter(e => new Date(e.date) >= startOfMonth);
 
-  const totalGastos = allTransactions
-    .filter(t => t.type === "EXPENSE")
-    .reduce((acc, curr) => acc + curr.amount, 0);
+  const totalIngresos   = allAccountEntries.reduce((acc, e) => acc + (e.haber || 0), 0);
+  const totalGastos     = allAccountEntries.reduce((acc, e) => acc + (e.debe  || 0), 0);
+  const balance         = totalIngresos - totalGastos;
+  const ingresosEsteMes = entriesThisMonth.reduce((acc, e) => acc + (e.haber || 0), 0);
+  const gastosEsteMes   = entriesThisMonth.reduce((acc, e) => acc + (e.debe  || 0), 0);
+  const balanceMes      = ingresosEsteMes - gastosEsteMes;
+  const recentEntries   = allAccountEntries.slice(0, 5);
 
-  const balance = totalIngresos - totalGastos;
-  const recentTransactions = allTransactions.slice(0, 5);
-
+  // ─── HELPERS ────────────────────────────────────────────────
   const getDaysDiff = (date: Date) => {
-    const today = new Date();
-    today.setHours(0,0,0,0); 
-    const eventDate = new Date(date);
-    eventDate.setHours(0,0,0,0);
-    const diffTime = eventDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const today = new Date(); today.setHours(0,0,0,0);
+    const d = new Date(date); d.setHours(0,0,0,0);
+    return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
+  const vencidos   = upcomingEvents.filter(e => getDaysDiff(e.date) < 0);
+  const hoy        = upcomingEvents.filter(e => getDaysDiff(e.date) === 0);
+  const proximos3  = upcomingEvents.filter(e => getDaysDiff(e.date) > 0 && getDaysDiff(e.date) <= 3);
+  const resto      = upcomingEvents.filter(e => getDaysDiff(e.date) > 3);
+  const hayUrgencias = vencidos.length > 0 || hoy.length > 0 || proximos3.length > 0;
+
   return (
-    <div className="flex-1 w-full p-6 space-y-6">
+    <div className="flex-1 w-full p-4 md:p-6 lg:p-8 space-y-5 max-w-[1600px] mx-auto">
 
-      {/* SECCIÓN 0: WIDGETS (Siempre útiles arriba) */}
-      <FinancialWidgets />
-
-      {/* GRID PRINCIPAL: 2 Columnas (Izquierda Operativa / Derecha Financiera) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {/* ══════════════════════════════════════════════════════
+          BARRA COMPACTA — reemplaza las 4 tarjetas KPI
+          ══════════════════════════════════════════════════════ */}
+      <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-3 shadow-sm text-sm">
         
-        {/* === COLUMNA IZQUIERDA (Prioridad Operativa) === */}
-        <div className="lg:col-span-8 space-y-8">
-            
-            {/* 1. AGENDA DE VENCIMIENTOS */}
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold flex items-center gap-2 dark:text-white text-slate-800">
-                        <CalendarDays className="h-6 w-6 text-blue-600" /> Agenda Prioritaria
-                        {upcomingEvents.length > 0 && (
-                            <span className="text-xs bg-red-600 text-white px-2 py-1 rounded-full animate-pulse">
-                                {upcomingEvents.length}
-                            </span>
-                        )}
-                    </h2>
-                </div>
-
-                {upcomingEvents.length === 0 ? (
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900 rounded-xl p-6 text-center text-green-800 dark:text-green-300 flex flex-col items-center gap-2">
-                        <CheckCircle2 className="h-8 w-8 text-green-600" />
-                        <span>¡Todo al día! No hay vencimientos pendientes.</span>
-                    </div>
-                ) : (
-                    <div className="grid md:grid-cols-2 gap-3">
-                        {upcomingEvents.map(evt => {
-                            const daysLeft = getDaysDiff(evt.date);
-                            let borderClass = "border-l-green-500"; 
-                            let bgClass = "bg-white dark:bg-slate-900";
-                            let statusText = `Faltan ${daysLeft} días`;
-                            let textColor = "text-green-700 dark:text-green-400";
-                            
-                            if (daysLeft < 0) {
-                                borderClass = "border-l-gray-400";
-                                bgClass = "bg-gray-50 dark:bg-slate-800 opacity-70";
-                                statusText = `Venció hace ${Math.abs(daysLeft)} días`;
-                                textColor = "text-gray-600 dark:text-gray-400";
-                            } else if (daysLeft <= 1) {
-                                borderClass = "border-l-red-500";
-                                bgClass = "bg-red-50 dark:bg-red-950/20"; 
-                                statusText = daysLeft === 0 ? "¡VENCE HOY!" : "¡VENCE MAÑANA!";
-                                textColor = "text-red-700 dark:text-red-400 font-bold";
-                            } else if (daysLeft <= 7) {
-                                borderClass = "border-l-yellow-400";
-                                bgClass = "bg-yellow-50 dark:bg-yellow-900/20"; 
-                                statusText = `Atención: ${daysLeft} días`;
-                                textColor = "text-yellow-800 dark:text-yellow-400";
-                            }
-
-                            return (
-                                <Link key={evt.id} href={`/client/${evt.case.clientId}/case/${evt.case.id}`}>
-                                    <Card className={`border-l-[4px] shadow-sm hover:shadow-md transition-all cursor-pointer h-full border-y border-r border-gray-200 dark:border-y-slate-800 dark:border-r-slate-800 ${borderClass} ${bgClass} group`}>
-                                        <CardContent className="p-3">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <span className={`text-[10px] uppercase tracking-wider font-bold ${textColor}`}>
-                                                    {statusText}
-                                                </span>
-                                                <span className="text-[10px] font-mono text-slate-400">
-                                                    {evt.date.toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                            <h3 className="font-bold text-base text-gray-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
-                                                {evt.title}
-                                            </h3>
-                                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                                <Briefcase className="h-3 w-3" /> {evt.case.caratula}
-                                            </p>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
-            {/* 2. CLIENTES (Buscador y Lista) */}
-            <div className="space-y-4">
-                <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                        <Users className="h-6 w-6 text-slate-600 dark:text-slate-400" /> Clientes
-                    </h2>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <SearchInput /> 
-                        <CreateClientDialog />
-                    </div>
-                </div>
-                <AreaFilter />
-
-                <div className="grid md:grid-cols-2 gap-4">
-                    {clients.map((client) => (
-                        <Card key={client.id} className="hover:border-blue-300 dark:hover:border-blue-700 transition-colors border shadow-sm dark:bg-slate-900 dark:border-slate-800 group">
-                            <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <DeleteButton id={client.id} type="CLIENT" />
-                            </div>
-                            <Link href={`/client/${client.id}`} className="block p-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                                            {client.lastName}, {client.firstName}
-                                        </h3>
-                                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                                            <Phone className="h-3 w-3" /> {client.phone || "Sin contacto"}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        {/* TAGS CON COLORES SEGÚN FUERO */}
-                                        {client.cases.map((c, i) => {
-                                            const areaStyles: Record<string, string> = {
-                                                CIVIL: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
-                                                FAMILIA: "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800",
-                                                LABORAL: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
-                                                PENAL: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
-                                                PREVISIONAL: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
-                                                ADMINISTRATIVO: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/30 dark:text-slate-300 dark:border-slate-800",
-                                            };
-                                            const style = areaStyles[c.area || 'CIVIL'] || areaStyles.CIVIL;
-
-                                            return (
-                                                <span key={i} className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${style}`}>
-                                                    {c.area || 'CIVIL'}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </Link>
-                        </Card>
-                    ))}
-                    
-                    {clients.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-gray-400 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-xl">
-                            <Search className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                            <p>No se encontraron clientes.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+        <div className="flex items-center gap-2 pr-4 border-r border-slate-200 dark:border-slate-700">
+          <Users className="h-4 w-4 text-blue-500 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400">Clientes</span>
+          <span className="font-bold text-slate-900 dark:text-white">{totalClients}</span>
         </div>
 
-        {/* === COLUMNA DERECHA (Resumen Financiero y Actividad) === */}
-        <div className="lg:col-span-4 space-y-6">
-            
-            {/* 👇 ACÁ ESTÁ EL CAMBIO: CAJA DEL ESTUDIO ADAPTABLE */}
-            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white shadow-lg relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-100 transition-opacity">
-                    {/* El icono de fondo es sutil en ambos modos */}
-                    <BarChart3 className="h-32 w-32 text-slate-100 dark:text-slate-800" />
+        <div className="flex items-center gap-2 px-4 border-r border-slate-200 dark:border-slate-700">
+          <Scale className="h-4 w-4 text-slate-500 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400">Juicios</span>
+          <span className="font-bold text-slate-900 dark:text-white">{judicialCases}</span>
+        </div>
+
+        <div className="flex items-center gap-2 px-4 border-r border-slate-200 dark:border-slate-700">
+          <FolderOpen className="h-4 w-4 text-indigo-500 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400">Admin.</span>
+          <span className="font-bold text-slate-900 dark:text-white">{extrajudicialCases}</span>
+        </div>
+
+        <div className="flex items-center gap-2 px-4 border-r border-slate-200 dark:border-slate-700">
+          <CalendarDays className={`h-4 w-4 shrink-0 ${pendingEvents > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
+          <span className="text-slate-500 dark:text-slate-400">Vencimientos</span>
+          <span className={`font-bold ${pendingEvents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+            {pendingEvents}
+          </span>
+        </div>
+
+        {/* Saldo del mes — al extremo derecho */}
+        <div className="flex items-center gap-2 px-4 ml-auto">
+          <Wallet className="h-4 w-4 text-emerald-500 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400">
+            {now.toLocaleDateString('es-AR', { month: 'long' })}
+          </span>
+          <span className={`font-bold font-mono ${balanceMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+            {balanceMes >= 0 ? '+' : ''}$ {balanceMes.toLocaleString("es-AR")}
+          </span>
+        </div>
+
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+          SEMÁFORO DE URGENCIAS
+          ══════════════════════════════════════════════════════ */}
+      {hayUrgencias && (
+        <div className="space-y-2">
+
+          {vencidos.map(evt => (
+            <Link key={evt.id} href={`/client/${evt.case?.clientId}/case/${evt.case?.id}`}>
+              <div className="flex items-center gap-4 bg-red-600 dark:bg-red-700 text-white rounded-xl px-5 py-3 hover:bg-red-700 transition-all shadow-md mb-2">
+                <AlertTriangle className="h-5 w-5 shrink-0 animate-pulse" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">VENCIDO</span>
+                  <p className="font-bold truncate">{evt.title}</p>
+                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
                 </div>
-                
-                <CardHeader className="pb-2 relative z-10">
-                    <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <Wallet className="h-4 w-4" /> Caja del Estudio
-                    </CardTitle>
-                </CardHeader>
-                
-                <CardContent className="relative z-10">
-                    <div className="mb-4">
-                        <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-                            $ {balance.toLocaleString()}
-                        </span>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Balance Total (Ingresos - Gastos)</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-6 border-t border-slate-100 dark:border-slate-800 pt-4">
-                        <div>
-                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold flex items-center gap-1">
-                                <TrendingUp className="h-3 w-3" /> Ingresos
-                            </p>
-                            <p className="font-mono text-lg text-slate-700 dark:text-slate-200">$ {totalIngresos.toLocaleString()}</p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold flex items-center gap-1">
-                                <TrendingDown className="h-3 w-3" /> Gastos
-                            </p>
-                            <p className="font-mono text-lg text-slate-700 dark:text-slate-200">$ {totalGastos.toLocaleString()}</p>
-                        </div>
-                    </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-mono opacity-75">{new Date(evt.date).toLocaleDateString('es-AR')}</p>
+                  <p className="text-sm font-bold">{Math.abs(getDaysDiff(evt.date))}d atrás</p>
+                </div>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </div>
+            </Link>
+          ))}
 
-                    <Link href="/reports">
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md group">
-                            Ver Reportes y Gráficos <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                    </Link>
-                </CardContent>
-            </Card>
+          {hoy.map(evt => (
+            <Link key={evt.id} href={`/client/${evt.case?.clientId}/case/${evt.case?.id}`}>
+              <div className="flex items-center gap-4 bg-amber-500 dark:bg-amber-600 text-white rounded-xl px-5 py-3 hover:bg-amber-600 transition-all shadow-md mb-2">
+                <Zap className="h-5 w-5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">HOY</span>
+                  <p className="font-bold truncate">{evt.title}</p>
+                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
+                </div>
+                <p className="text-sm font-bold shrink-0">
+                  {new Date(evt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+                </p>
+                <ChevronRight className="h-4 w-4 opacity-60" />
+              </div>
+            </Link>
+          ))}
 
-            {/* LISTA DE ÚLTIMOS PAGOS (Compacta) */}
-            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                        <Clock className="h-4 w-4 text-slate-500" /> Actividad Reciente
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {recentTransactions.length === 0 ? (
-                        <div className="p-6 text-center text-xs text-slate-400 italic">
-                            Sin movimientos recientes.
+          {proximos3.map(evt => (
+            <Link key={evt.id} href={`/client/${evt.case?.clientId}/case/${evt.case?.id}`}>
+              <div className="flex items-center gap-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-xl px-5 py-3 hover:border-orange-400 transition-all mb-2">
+                <Clock className="h-5 w-5 shrink-0 text-orange-500" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
+                    EN {getDaysDiff(evt.date)} DÍA{getDaysDiff(evt.date) > 1 ? 'S' : ''}
+                  </span>
+                  <p className="font-bold text-slate-900 dark:text-white truncate">{evt.title}</p>
+                  <p className="text-xs text-slate-500 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
+                </div>
+                <p className="text-xs font-mono text-slate-500 shrink-0">{new Date(evt.date).toLocaleDateString('es-AR')}</p>
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </div>
+            </Link>
+          ))}
+
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          GRILLA PRINCIPAL
+          ══════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* COLUMNA IZQUIERDA (8/12) */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+
+          {/* AGENDA */}
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-blue-500" /> Agenda
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {resto.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                  <CheckCircle2 className="h-8 w-8 mb-2" />
+                  <span className="font-medium">
+                    {upcomingEvents.length === 0 ? 'Agenda despejada. Todo al día.' : 'No hay más eventos próximos.'}
+                  </span>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {resto.map(evt => {
+                    const days = getDaysDiff(evt.date);
+                    return (
+                      <Link key={evt.id} href={`/client/${evt.case?.clientId}/case/${evt.case?.id}`} className="group">
+                        <div className="flex items-center gap-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 px-2 rounded-lg transition-colors">
+                          <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex flex-col items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/40">
+                            <span className="text-[10px] font-bold uppercase text-blue-500">
+                              {new Date(evt.date).toLocaleDateString('es-AR', { month: 'short' })}
+                            </span>
+                            <span className="text-xl font-extrabold text-blue-700 dark:text-blue-300 leading-none">
+                              {new Date(evt.date).getDate()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded uppercase">
+                                {evt.type === 'HEARING' ? 'Audiencia' : evt.type === 'DEADLINE' ? 'Plazo' : 'Reunión'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">en {days} días</span>
+                            </div>
+                            <p className="font-semibold text-slate-900 dark:text-white truncate">{evt.title}</p>
+                            <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                              <Gavel className="h-3 w-3 shrink-0" /> {evt.case?.caratula}
+                            </p>
+                          </div>
+                          <p className="text-xs font-mono text-slate-500 shrink-0">
+                            {new Date(evt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+                          </p>
+                          <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
                         </div>
-                    ) : (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {recentTransactions.map(t => (
-                                <Link key={t.id} href={`/client/${t.case.clientId}/case/${t.case.id}`} className="block hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                    <div className="p-3 flex justify-between items-center text-xs">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            {t.type === 'INCOME' 
-                                                ? <div className="bg-emerald-100 dark:bg-emerald-900/30 p-1 rounded-full"><TrendingUp className="h-3 w-3 text-emerald-600" /></div>
-                                                : <div className="bg-red-100 dark:bg-red-900/30 p-1 rounded-full"><TrendingDown className="h-3 w-3 text-red-600" /></div>
-                                            }
-                                            <div className="truncate">
-                                                <p className="font-medium text-slate-700 dark:text-slate-200 truncate">{t.description}</p>
-                                                <p className="text-[10px] text-slate-400">{t.date.toLocaleDateString()}</p>
-                                            </div>
-                                        </div>
-                                        <span className={`font-mono font-bold whitespace-nowrap ${t.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                            {t.type === 'INCOME' ? '+' : '-'} ${t.amount.toLocaleString()}
-                                        </span>
-                                    </div>
-                                </Link>
-                            ))}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* DIRECTORIO DE CLIENTES */}
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex-1">
+            <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800/60">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" /> Directorio de Clientes
+                </CardTitle>
+                <CreateClientDialog />
+              </div>
+              <div className="space-y-4">
+                <SearchInput />
+                <AreaFilter />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 p-4 md:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {clients.length === 0 ? (
+                  <div className="col-span-full py-8 text-center text-slate-500 text-sm">
+                    No se encontraron clientes.
+                  </div>
+                ) : (
+                  clients.map((client) => (
+                    <div key={client.id} className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl p-4 transition-all shadow-sm hover:shadow-md">
+                      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DeleteButton id={client.id} type="CLIENT" />
+                      </div>
+                      <Link href={`/client/${client.id}`} className="block">
+                        <h3 className="font-bold text-slate-900 dark:text-white pr-8 truncate">
+                          {client.lastName}, {client.firstName}
+                        </h3>
+                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 mb-3">
+                          <Phone className="h-3 w-3" /> {client.phone || "Sin contacto"}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {client.cases.length === 0 && <span className="text-[10px] text-slate-400 italic">Sin carpetas</span>}
+                          {client.cases.slice(0, 3).map((c, i) => (
+                            <span key={i} className={`text-[9px] font-bold px-2 py-0.5 rounded text-white ${c.isExtrajudicial ? 'bg-indigo-500' : 'bg-slate-700 dark:bg-slate-600'}`}>
+                              {c.isExtrajudicial ? 'ADMIN' : (c.area || 'CIVIL')}
+                            </span>
+                          ))}
+                          {client.cases.length > 3 && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-800">
+                              +{client.cases.length - 3}
+                            </span>
+                          )}
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+                      </Link>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* COLUMNA DERECHA (4/12) */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+
+          {/* CAJA */}
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm border-t-4 border-t-emerald-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                Caja General <Wallet className="h-4 w-4 text-emerald-500" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Saldo acumulado</p>
+                <div className={`text-4xl font-extrabold tracking-tight ${balance >= 0 ? 'dark:text-white' : 'text-red-500'}`}>
+                  {balance < 0 ? '-' : ''}$ {Math.abs(balance).toLocaleString("es-AR")}
+                </div>
+              </div>
+
+              <div className="space-y-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2">Acumulado total</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-emerald-500" /> Ingresos
+                  </span>
+                  <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    $ {totalIngresos.toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <div className="h-px w-full bg-slate-200 dark:bg-slate-700" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                    <TrendingDown className="h-4 w-4 text-red-500" /> Egresos
+                  </span>
+                  <span className="font-mono text-sm font-bold text-red-500">
+                    $ {totalGastos.toLocaleString("es-AR")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                <p className="text-[10px] font-bold uppercase text-blue-500 tracking-widest mb-2">
+                  Este mes — {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4 text-emerald-500" /> Ingresos
+                  </span>
+                  <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    $ {ingresosEsteMes.toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <div className="h-px w-full bg-blue-100 dark:bg-blue-900/30" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+                    <TrendingDown className="h-4 w-4 text-red-500" /> Egresos
+                  </span>
+                  <span className="font-mono text-sm font-bold text-red-500">
+                    $ {gastosEsteMes.toLocaleString("es-AR")}
+                  </span>
+                </div>
+                <div className="h-px w-full bg-blue-100 dark:bg-blue-900/30" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">Resultado del mes</span>
+                  <span className={`font-mono text-sm font-bold ${balanceMes >= 0 ? 'text-slate-900 dark:text-white' : 'text-red-500'}`}>
+                    {balanceMes >= 0 ? '+' : ''}$ {balanceMes.toLocaleString("es-AR")}
+                  </span>
+                </div>
+              </div>
+
+              <Link href="/contabilidad" className="block">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2">
+                  <BookOpen className="h-4 w-4" /> Ir a Contabilidad <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* MOVIMIENTOS RECIENTES */}
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex-1">
+            <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800/60">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Activity className="h-5 w-5 text-blue-500" /> Movimientos Recientes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentEntries.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-8 italic">No hay actividad registrada.</p>
+              ) : (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {recentEntries.map(entry => (
+                    <div key={entry.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`p-2 rounded-full shrink-0 ${entry.haber > 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                          {entry.haber > 0
+                            ? <TrendingUp className="h-4 w-4 text-emerald-600" />
+                            : <TrendingDown className="h-4 w-4 text-red-600" />}
+                        </div>
+                        <div className="truncate pr-2">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{entry.description}</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">
+                            {new Date(entry.date).toLocaleDateString('es-AR')}
+                            {entry.case && <span className="ml-1">· {entry.case.code}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-bold font-mono whitespace-nowrap ${entry.haber > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {entry.haber > 0 ? '+' : '-'}${Math.max(entry.haber, entry.debe).toLocaleString("es-AR")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { registerUser } from "@/app/actions";
+import { registerUser } from "@/lib/actions/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
