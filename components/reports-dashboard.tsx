@@ -97,10 +97,10 @@ export function ReportsDashboard({ financialData, areaData, kpi }: ReportsProps)
 
       <div className="grid gap-6 md:grid-cols-2">
         
-        {/* 2. GRÁFICO DE BARRAS: FLUJO DE CAJA */}
+        {/* 2. GRAFICO DE BARRAS: EVOLUCION MENSUAL */}
         <Card className="dark:bg-slate-900 dark:border-slate-800">
             <CardHeader>
-                <CardTitle className="dark:text-white text-lg">Flujo de Caja (Últimos 6 meses)</CardTitle>
+                <CardTitle className="dark:text-white text-lg">Evolucion mensual (ultimos 6 meses)</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">

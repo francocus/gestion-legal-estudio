@@ -1,8 +1,8 @@
-# Sistema de Gestión de Expedientes (Santa Fe) ⚖️
+# Sistema de Gestion Juridica Integral
 
-Plataforma web integral para la administración de estudios jurídicos, optimizada específicamente para la normativa y procesos de la Provincia de Santa Fe.
+Plataforma web integral para la administracion de estudios juridicos, con enfoque internacional y adaptable a distintas jurisdicciones, materias y formas de trabajo.
 
-Centraliza la gestión de clientes, el seguimiento de causas judiciales y el control financiero del estudio, reemplazando planillas de Excel dispersas con una solución unificada y moderna.
+Centraliza la gestion de clientes, el seguimiento de expedientes judiciales y extrajudiciales, la biblioteca juridica y el control financiero del estudio, reemplazando planillas dispersas con una solucion unificada y moderna.
 
 ![Dashboard Principal](public/screenshots/dashboard.png)
 *Vista general del estado financiero y la agenda prioritaria del estudio.*
@@ -11,32 +11,29 @@ Centraliza la gestión de clientes, el seguimiento de causas judiciales y el con
 
 ## Funcionalidades Clave
 
-### Especialización Santa Fe 🇦🇷
-* **Calculadora JUS Integrada:** Conversión automática y actualizada de Unidades JUS a Pesos para presupuestar y verificar regulaciones de honorarios al instante.
-* **Conexión con SISFE:** Acceso directo a la visualización de expedientes en el Poder Judicial de Santa Fe desde cada causa.
-* **Juzgados Locales:** Base de datos precargada con la nómina de juzgados de Rosario y Santa Fe.
+### Enfoque integral
+* **Expedientes judiciales y extrajudiciales:** Seguimiento flexible para distintas areas del derecho y gestiones administrativas.
+* **Biblioteca juridica vinculada:** Leyes, codigos y fallos relacionados con cada expediente.
+* **Asistencia con IA:** Analisis comparativo de textos normativos y apoyo estrategico.
 
-![Calculadora JUS](public/screenshots/expediente-edit.png)
-*Módulo de cálculo automático de honorarios basado en el valor JUS actual.*
-
-### Gestión Procesal y Financiera
-* **Expediente Digital:** Historial cronológico de movimientos, control de estados y semáforo de vencimientos.
-* **Control de Caja:** Registro de ingresos y gastos por expediente. Visualización gráfica del progreso de cobro de honorarios.
-* **Agenda Inteligente:** Alertas visuales de plazos fatales y audiencias próximas.
+### Gestion Procesal y Financiera
+* **Expediente Digital:** Historial cronologico de movimientos, control de estados y semaforo de vencimientos.
+* **Control de Caja:** Registro de ingresos y gastos por expediente. Visualizacion grafica del progreso de cobro de honorarios.
+* **Agenda Inteligente:** Alertas visuales de plazos fatales, audiencias y compromisos relevantes.
 
 ![Detalle de Expediente](public/screenshots/expediente.png)
-*Vista de detalle con seguimiento de cobros y próximos vencimientos.*
+*Vista de detalle con seguimiento de cobros y proximos vencimientos.*
 
 ---
 
-## Stack Tecnológico
+## Stack Tecnologico
 
 Desarrollado con una arquitectura moderna, tipada y de alto rendimiento:
 
-* **Frontend:** Next.js 14 (App Router), React, TypeScript.
-* **Estilos & UI:** Tailwind CSS, Shadcn/ui (Componentes accesibles y modo oscuro nativo).
+* **Frontend:** Next.js 16, React, TypeScript.
+* **Estilos & UI:** Tailwind CSS, Shadcn/ui.
 * **Backend:** Server Actions.
-* **Base de Datos:** PostgreSQL (vía Neon DB).
+* **Base de Datos:** PostgreSQL.
 * **ORM:** Prisma.
 * **Seguridad:** Auth.js (NextAuth v5).
 
@@ -44,8 +41,4 @@ Desarrollado con una arquitectura moderna, tipada y de alto rendimiento:
 
 ## Estado del Proyecto
 
-El sistema se encuentra en fase de producción, con todas sus funcionalidades principales operativas.
-
-🔗 **Deploy (Demo):** [[gestion-legal-estudio.vercel.app](https://gestion-legal-estudio.vercel.app/)]
-* **Perfil Abogado (Solo Lectura sugerido):** `abogado@legal.com` / `abogado123`
-*(Acceso con credenciales de demostración)*
+El sistema se encuentra en fase operativa, con su base principal consolidada y preparada para seguir expandiendo modulos juridicos, contables y de analisis.

@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createClient } from "@/lib/actions/clients";
-import { santaFeCities } from "@/lib/santa-fe-cities";
 import { AlertTriangle, ChevronDown, ChevronUp, Save, UserPlus } from "lucide-react";
 
 export function CreateClientDialog() {
@@ -160,19 +159,7 @@ export function CreateClientDialog() {
                 <Label className="font-bold text-gray-700 dark:text-gray-200">Domicilio y Ubicacion</Label>
                 <div className="grid grid-cols-2 gap-4">
                   <Input name="address" placeholder="Calle y Altura" className="dark:bg-slate-900 dark:border-slate-800" />
-
-                  <Select name="location">
-                    <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
-                      <SelectValue placeholder="Ciudad..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px] dark:bg-slate-900 dark:border-slate-800">
-                      <SelectItem value="EMPTY_SELECTION" className="text-gray-400">-- No especificar --</SelectItem>
-                      {santaFeCities.map((city) => (
-                        <SelectItem key={city} value={city}>{city}</SelectItem>
-                      ))}
-                      <SelectItem value="OTRA">Otra / Fuera de Sta Fe</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input name="location" placeholder="Ciudad / Provincia / Pais" className="dark:bg-slate-900 dark:border-slate-800" />
                 </div>
               </div>
 

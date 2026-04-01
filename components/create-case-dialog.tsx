@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createCase } from "@/lib/actions/cases";
-import { santaFeCourts } from "@/lib/santa-fe-courts";
 import {
   AlertTriangle,
   Briefcase,
@@ -90,7 +89,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
         <DialogHeader>
           <DialogTitle className="dark:text-white flex items-center gap-2">
             {isExtrajudicial ? (
-              <><Building2 className="h-5 w-5 text-indigo-500" /> Nueva Carpeta Administrativa</>
+              <><Building2 className="h-5 w-5 text-indigo-500" /> Nueva Gestion Extrajudicial</>
             ) : (
               <><Gavel className="h-5 w-5 text-blue-500" /> Iniciar Nuevo Expediente Judicial</>
             )}
@@ -101,7 +100,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
           <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
             <div>
               <Label className="text-sm font-bold dark:text-gray-300">Tramite Extrajudicial</Label>
-              <p className="text-[10px] text-slate-500">Alquileres, mutuos, administracion (Sin Juzgado)</p>
+              <p className="text-[10px] text-slate-500">Acuerdos, cobranzas, inmuebles y otras gestiones sin tribunal</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -116,12 +115,12 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
 
           <div className="grid gap-2">
             <Label htmlFor="caratula" className="dark:text-gray-300">
-              {isExtrajudicial ? "Nombre de la Carpeta" : "Caratula"} <span className="text-red-500">*</span>
+              {isExtrajudicial ? "Nombre de la gestion" : "Caratula"} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="caratula"
               name="caratula"
-              placeholder={isExtrajudicial ? "Ej: Administracion Depto Orono 1234" : "Ej: Perez c/ Gonzalez s/ Danos"}
+              placeholder={isExtrajudicial ? "Ej: Acuerdo de pago - Perez" : "Ej: Perez c/ Gonzalez s/ Danos"}
               required
               className="dark:bg-slate-900 dark:border-slate-800"
             />
@@ -138,28 +137,21 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
 
               <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
                 <Label htmlFor="juzgado" className="dark:text-gray-300">
-                  Juzgado / Radicacion <span className="text-red-500">*</span>
+                  Organismo / Tribunal / Referencia
                 </Label>
-                <Select name="juzgado" required>
-                  <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800 w-full [&>span]:truncate text-left">
-                    <SelectValue placeholder="Seleccionar Juzgado..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] max-w-[400px] dark:bg-slate-950 dark:border-slate-800">
-                    {santaFeCourts.map((court) => (
-                      <SelectItem key={court} value={court} className="whitespace-normal">
-                        {court}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="OTRO">Otro / Fuera de Lista</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="juzgado"
+                  name="juzgado"
+                  placeholder="Ej: Tribunal Laboral Nro. 2, Centro de Mediacion, Camara Civil..."
+                  className="dark:bg-slate-900 dark:border-slate-800"
+                />
               </div>
             </>
           )}
 
           <div className="grid gap-2 animate-in fade-in">
             <Label htmlFor="area" className="dark:text-gray-300">
-              {isExtrajudicial ? "Categoria de Administracion" : "Fuero / Materia"}
+              {isExtrajudicial ? "Tipo de gestion" : "Fuero / Materia"}
             </Label>
 
             <Select name="area" value={area} onValueChange={setArea} required>
@@ -170,7 +162,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
                 {isExtrajudicial ? (
                   <>
                     <SelectItem value="INMOBILIARIO"><div className="flex items-center gap-2"><Building2 className="h-3.5 w-3.5" /> Inmobiliario</div></SelectItem>
-                    <SelectItem value="COBRANZAS"><div className="flex items-center gap-2"><Landmark className="h-3.5 w-3.5" /> Cobranzas y Prestamos</div></SelectItem>
+                    <SelectItem value="COBRANZAS"><div className="flex items-center gap-2"><Landmark className="h-3.5 w-3.5" /> Cobranzas y creditos</div></SelectItem>
                     <SelectItem value="TRIBUTARIO"><div className="flex items-center gap-2"><Calculator className="h-3.5 w-3.5" /> Impuestos y Tributacion</div></SelectItem>
                     <SelectItem value="RRHH"><div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5" /> Sueldos y Despidos</div></SelectItem>
                     <SelectItem value="ACUERDOS"><div className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Acuerdos</div></SelectItem>
@@ -201,7 +193,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
           >
             {loading ? "Creando..." : (
               <>
-                <Save className="h-4 w-4" /> {isExtrajudicial ? "Crear Carpeta" : "Crear Expediente"}
+                <Save className="h-4 w-4" /> {isExtrajudicial ? "Crear gestion" : "Crear expediente"}
               </>
             )}
           </Button>

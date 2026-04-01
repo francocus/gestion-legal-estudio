@@ -60,6 +60,7 @@ void (async () => {
       country: "Argentina",
       content: "Texto vigente",
       sourceUrl: "https://example.com/norma",
+      publicationDate: null,
     });
     assert.deepEqual(calls, ["/biblioteca"]);
   });
@@ -73,6 +74,29 @@ void (async () => {
     });
 
     assert.deepEqual(result, { success: false, error: "Faltan datos obligatorios de la fuente juridica." });
+  });
+
+  await runTest("createLegalSourceWithDeps rejects unsupported countries", async () => {
+    const result = await createLegalSourceWithDeps(
+      createFormData({
+        title: "Norma X",
+        type: "LAW",
+        area: "civil",
+        country: "Uruguay",
+        content: "Texto",
+      }),
+      {
+        async createLegalSource() {
+          throw new Error("no deberia crear");
+        },
+        revalidatePath() {},
+      }
+    );
+
+    assert.deepEqual(result, {
+      success: false,
+      error: "La biblioteca solo admite fuentes de Argentina o Paraguay.",
+    });
   });
 
   await runTest("deleteLegalSourceWithDeps deletes and revalidates library", async () => {

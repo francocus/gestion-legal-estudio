@@ -43,7 +43,7 @@ export function WhatsAppActions({ client, legalCase }: WhatsAppActionsProps) {
   const [error, setError] = useState<string | null>(null);
 
   const myCbuAlias = "ESTUDIO.JURIDICO.ALIAS";
-  const bankName = "Banco Santa Fe";
+  const bankName = "Banco / entidad a definir";
 
   const cleanPhone = client.phone ? client.phone.replace(/[^0-9]/g, "") : "";
   const baseUrl = `https://wa.me/549${cleanPhone}?text=`;

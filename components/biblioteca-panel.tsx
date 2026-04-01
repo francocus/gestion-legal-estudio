@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { LegalSourceType } from "@prisma/client";
-import { createLegalSource, deleteLegalSource, markAsReviewed } from "@/lib/actions/biblioteca";
+import { createLegalSource, deleteLegalSource } from "@/lib/actions/biblioteca";
 import {
   Search,
   Trash2,
@@ -11,10 +11,11 @@ import {
   Bot,
   Globe,
   AlertTriangle,
-  CheckCircle2,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LegalSourceComparatorDialog } from "@/components/legal-source-comparator-dialog";
+import { detectOfficialLegalSource } from "@/lib/legal-source-officials";
 
 interface LegalSource {
   id: string;
@@ -24,13 +25,52 @@ interface LegalSource {
   country: string;
   content: string;
   sourceUrl: string | null;
+  publicationDate: Date | string | null;
   lastAiCheck: Date | string | null;
   isOutdated: boolean;
   previousText: string | null;
 }
 
+const TYPE_LABELS: Record<LegalSourceType, string> = {
+  LAW: "Ley",
+  CODE: "Codigo",
+  CONSTITUTION: "Constitucion",
+  JURISPRUDENCE: "Jurisprudencia",
+  OTHER: "Otro",
+};
+
+function getReviewStatus(source: LegalSource) {
+  if (source.isOutdated) {
+    return {
+      label: source.sourceUrl ? "Revisar vigencia o cambios" : "Contenido a revisar",
+      className: "text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/30",
+    };
+  }
+
+  if (source.lastAiCheck && source.sourceUrl) {
+    return {
+      label: "Verificado con fuente oficial",
+      className: "text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/30",
+    };
+  }
+
+  if (source.lastAiCheck) {
+    return {
+      label: "Analisis de consistencia IA",
+      className: "text-sky-700 bg-sky-100 dark:text-sky-300 dark:bg-sky-900/30",
+    };
+  }
+
+  return {
+    label: "Sin analisis IA",
+    className: "text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800",
+  };
+}
+
 function LegalCard({ source }: { source: LegalSource }) {
   const [showDiff, setShowDiff] = useState(false);
+  const reviewStatus = getReviewStatus(source);
+  const officialSource = detectOfficialLegalSource(source.sourceUrl, source.country);
 
   return (
     <div
@@ -60,28 +100,60 @@ function LegalCard({ source }: { source: LegalSource }) {
       <div className="flex justify-between items-start gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-              {source.country === "Argentina"
-                ? "ARG"
-                : source.country === "Paraguay"
-                  ? "PRY"
-                  : source.country}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded-full">
+              {source.country}
             </span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
               {source.area}
             </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+              {TYPE_LABELS[source.type]}
+            </span>
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${reviewStatus.className}`}>
+              {reviewStatus.label}
+            </span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Bot className="h-3 w-3" /> IA activa
+              <Bot className="h-3 w-3" /> IA
             </span>
           </div>
           <h4 className="font-bold text-lg dark:text-white leading-tight">{source.title}</h4>
-          {source.lastAiCheck && (
-            <p className="text-[10px] text-gray-400 mt-1">
-              Ultima revision IA: {new Date(source.lastAiCheck).toLocaleDateString()}
-            </p>
-          )}
+          <div className="mt-1 space-y-1">
+            {source.publicationDate && (
+              <p className="text-[10px] text-gray-400">
+                Publicacion: {new Date(source.publicationDate).toLocaleDateString("es-AR")}
+              </p>
+            )}
+            {source.lastAiCheck && (
+              <p className="text-[10px] text-gray-400">
+                Ultima revision IA: {new Date(source.lastAiCheck).toLocaleDateString("es-AR")}
+              </p>
+            )}
+            {officialSource.label && (
+              <p className="text-[10px] text-emerald-500 dark:text-emerald-400">
+                Fuente oficial: {officialSource.label}
+              </p>
+            )}
+            {!source.sourceUrl && (
+              <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                Sin link oficial, la vigencia no fue verificada.
+              </p>
+            )}
+            {source.sourceUrl && !officialSource.recognized && (
+              <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                Link externo cargado. La verificacion fuerte de vigencia se recomienda con fuente oficial.
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {source.previousText && (
+            <LegalSourceComparatorDialog
+              title={source.title}
+              country={source.country}
+              previousText={source.previousText}
+              currentText={source.content}
+            />
+          )}
           {source.sourceUrl && (
             <a
               href={source.sourceUrl}
@@ -129,20 +201,11 @@ function LegalCard({ source }: { source: LegalSource }) {
 
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-900/50 shadow-sm">
             <h5 className="text-green-700 dark:text-green-400 font-bold text-xs flex items-center gap-1 mb-3">
-              <CheckCircle2 className="h-4 w-4" /> Nuevo texto vigente
+              <Bot className="h-4 w-4" /> Ficha oficial analizada
             </h5>
             <p className="text-sm text-gray-800 dark:text-gray-200 font-medium font-serif">
               {source.content}
             </p>
-          </div>
-
-          <div className="col-span-1 md:col-span-2 flex justify-end mt-2">
-            <Button
-              onClick={() => markAsReviewed(source.id)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" /> Marcar como revisado
-            </Button>
           </div>
         </div>
       )}
@@ -153,7 +216,9 @@ function LegalCard({ source }: { source: LegalSource }) {
 export function BibliotecaPanel({ initialSources }: { initialSources: LegalSource[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterArea, setFilterArea] = useState("TODAS");
-  const [filterCountry, setFilterCountry] = useState("TODOS");
+  const [filterCountry, setFilterCountry] = useState("Argentina");
+  const [filterType, setFilterType] = useState("TODOS");
+  const [filterStatus, setFilterStatus] = useState("TODOS");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -163,10 +228,18 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
       source.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       source.content.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesArea = filterArea === "TODAS" || source.area === filterArea;
-    const matchesCountry = filterCountry === "TODOS" || source.country === filterCountry;
+    const matchesCountry = source.country === filterCountry;
+    const matchesType = filterType === "TODOS" || source.type === filterType;
+    const matchesStatus =
+      filterStatus === "TODOS" ||
+      (filterStatus === "OUTDATED" && source.isOutdated) ||
+      (filterStatus === "REVIEWED" && !source.isOutdated && Boolean(source.lastAiCheck)) ||
+      (filterStatus === "PENDING" && !source.isOutdated && !source.lastAiCheck);
 
-    return matchesSearch && matchesArea && matchesCountry;
+    return matchesSearch && matchesArea && matchesCountry && matchesType && matchesStatus;
   });
+
+  const currentCountryLabel = filterCountry === "Paraguay" ? "Paraguay" : "Argentina";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -196,10 +269,11 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
             <select
               required
               name="country"
+              defaultValue="Argentina"
               className="w-full mt-1 p-2 border rounded-md dark:bg-slate-900 dark:border-slate-800 dark:text-white text-sm font-medium"
             >
-              <option value="Argentina">Argentina (InfoLeg / CSJN)</option>
-              <option value="Paraguay">Paraguay (SIGLA / CSJ)</option>
+              <option value="Argentina">Argentina</option>
+              <option value="Paraguay">Paraguay</option>
             </select>
           </div>
 
@@ -224,12 +298,13 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
               >
                 <option value="LAW">Ley</option>
                 <option value="CODE">Codigo</option>
-                <option value="JURISPRUDENCE">Fallo / Jurisp.</option>
+                <option value="JURISPRUDENCE">Jurisprudencia</option>
                 <option value="CONSTITUTION">Constitucion</option>
+                <option value="OTHER">Otro</option>
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-500">Area</label>
+              <label className="text-xs font-semibold text-gray-500">Materia</label>
               <select
                 required
                 name="area"
@@ -240,12 +315,27 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
                 <option value="LABORAL">Laboral</option>
                 <option value="COMERCIAL">Comercial</option>
                 <option value="CONSTITUCIONAL">Constitucional</option>
+                <option value="ADMINISTRATIVO">Administrativo</option>
+                <option value="TRIBUTARIO">Tributario</option>
+                <option value="FAMILIA">Familia</option>
               </select>
             </div>
           </div>
 
           <div>
+            <label className="text-xs font-semibold text-gray-500">Fecha de publicacion (opcional)</label>
+            <input
+              name="publicationDate"
+              type="date"
+              className="w-full mt-1 p-2 border rounded-md dark:bg-slate-900 dark:border-slate-800 dark:text-white text-sm"
+            />
+          </div>
+
+          <div>
             <label className="text-xs font-semibold text-gray-500">Link oficial (opcional)</label>
+            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+              Argentina: usa InfoLEG. Paraguay: usa la base oficial del Poder Judicial o la fuente legislativa oficial. Asi la IA puede verificar mejor la vigencia.
+            </p>
             <input
               name="sourceUrl"
               type="url"
@@ -295,7 +385,6 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
               onChange={(e) => setFilterCountry(e.target.value)}
               className="p-2 rounded-lg bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:text-white outline-none text-sm font-medium"
             >
-              <option value="TODOS">Todos los paises</option>
               <option value="Argentina">Argentina</option>
               <option value="Paraguay">Paraguay</option>
             </select>
@@ -304,10 +393,37 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
               onChange={(e) => setFilterArea(e.target.value)}
               className="p-2 rounded-lg bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:text-white outline-none text-sm"
             >
-              <option value="TODAS">Todas las areas</option>
+              <option value="TODAS">Todas las materias</option>
               <option value="CIVIL">Civil</option>
               <option value="PENAL">Penal</option>
               <option value="LABORAL">Laboral</option>
+              <option value="COMERCIAL">Comercial</option>
+              <option value="CONSTITUCIONAL">Constitucional</option>
+              <option value="ADMINISTRATIVO">Administrativo</option>
+              <option value="TRIBUTARIO">Tributario</option>
+              <option value="FAMILIA">Familia</option>
+            </select>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="p-2 rounded-lg bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:text-white outline-none text-sm"
+            >
+              <option value="TODOS">Todos los tipos</option>
+              <option value="LAW">Ley</option>
+              <option value="CODE">Codigo</option>
+              <option value="JURISPRUDENCE">Jurisprudencia</option>
+              <option value="CONSTITUTION">Constitucion</option>
+              <option value="OTHER">Otro</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="p-2 rounded-lg bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 dark:text-white outline-none text-sm"
+            >
+              <option value="TODOS">Todos los estados</option>
+              <option value="OUTDATED">Cambios detectados por IA</option>
+              <option value="REVIEWED">Controlado por IA</option>
+              <option value="PENDING">Sin analisis IA</option>
             </select>
           </div>
         </div>
@@ -317,7 +433,7 @@ export function BibliotecaPanel({ initialSources }: { initialSources: LegalSourc
             <div className="text-center py-12 bg-white dark:bg-slate-950 rounded-xl border border-dashed border-gray-300 dark:border-slate-700">
               <Globe className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p className="text-gray-500 dark:text-gray-400">
-                No se encontraron documentos para esta jurisdiccion.
+                No se encontraron fuentes para {currentCountryLabel} con esos filtros.
               </p>
             </div>
           ) : (

@@ -7,7 +7,9 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx tests/actions-parsers.test.ts && tsx tests/action-services.test.ts && tsx tests/library-notes-services.test.ts && tsx tests/ia-analysis.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/actions-parsers.test.ts && tsx tests/action-services.test.ts && tsx tests/library-notes-services.test.ts && tsx tests/ia-analysis.test.ts && tsx tests/case-sources-services.test.ts && tsx tests/legal-source-fetch.test.ts && tsx tests/system-flows.test.ts",
+    "check": "npm run lint && npm run typecheck && npm run test",
     "postinstall": "prisma generate"
   },
   "prisma": {

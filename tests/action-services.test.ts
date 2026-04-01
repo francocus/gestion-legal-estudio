@@ -552,11 +552,11 @@ void (async () => {
       }
     );
 
-    assert.deepEqual(created, {
-      date: new Date("2026-05-03"),
-      description: "Pago de tasa",
-      concept: "Tasa judicial",
-      debe: 15000,
+      assert.deepEqual(created, {
+        date: new Date("2026-05-03T12:00:00"),
+        description: "Pago de tasa",
+        concept: "Tasa judicial",
+        debe: 15000,
       haber: 0,
       caseId: "case-30",
     });

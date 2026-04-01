@@ -16,6 +16,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function getUtcMonthKey(dateValue: Date) {
+  const date = new Date(dateValue);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 interface PageProps {
   searchParams: Promise<{ q?: string; area?: string }>;
 }
@@ -26,10 +31,10 @@ export default async function Home({ searchParams }: PageProps) {
   const query = params.q || ""; 
   const area  = params.area || undefined;
 
-  // ─── MÉTRICAS ───────────────────────────────────────────────
+  // ─── METRICAS ───────────────────────────────────────────────
   const totalClients        = await db.client.count();
-  const judicialCases       = await db.case.count({ where: { status: 'ACTIVE', isExtrajudicial: false } });
-  const extrajudicialCases  = await db.case.count({ where: { status: 'ACTIVE', isExtrajudicial: true } });
+  const judicialCases       = await db.case.count({ where: { isExtrajudicial: false, status: { not: 'ARCHIVED' } } });
+  const extrajudicialCases  = await db.case.count({ where: { isExtrajudicial: true, status: { not: 'ARCHIVED' } } });
   const pendingEvents       = await db.event.count({ where: { isDone: false } });
 
   // ─── FILTROS ────────────────────────────────────────────────
@@ -70,8 +75,8 @@ export default async function Home({ searchParams }: PageProps) {
   });
 
   const now              = new Date();
-  const startOfMonth     = new Date(now.getFullYear(), now.getMonth(), 1);
-  const entriesThisMonth = allAccountEntries.filter(e => new Date(e.date) >= startOfMonth);
+  const currentMonthKey  = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const entriesThisMonth = allAccountEntries.filter(e => getUtcMonthKey(e.date) === currentMonthKey);
 
   const totalIngresos   = allAccountEntries.reduce((acc, e) => acc + (e.haber || 0), 0);
   const totalGastos     = allAccountEntries.reduce((acc, e) => acc + (e.debe  || 0), 0);
@@ -98,7 +103,7 @@ export default async function Home({ searchParams }: PageProps) {
     <div className="flex-1 w-full p-4 md:p-6 lg:p-8 space-y-5 max-w-[1600px] mx-auto">
 
       {/* ══════════════════════════════════════════════════════
-          BARRA COMPACTA — reemplaza las 4 tarjetas KPI
+          BARRA COMPACTA - reemplaza las 4 tarjetas KPI
           ══════════════════════════════════════════════════════ */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-3 shadow-sm text-sm">
         
@@ -110,13 +115,13 @@ export default async function Home({ searchParams }: PageProps) {
 
         <div className="flex items-center gap-2 px-4 border-r border-slate-200 dark:border-slate-700">
           <Scale className="h-4 w-4 text-slate-500 shrink-0" />
-          <span className="text-slate-500 dark:text-slate-400">Juicios</span>
+          <span className="text-slate-500 dark:text-slate-400">Judiciales</span>
           <span className="font-bold text-slate-900 dark:text-white">{judicialCases}</span>
         </div>
 
         <div className="flex items-center gap-2 px-4 border-r border-slate-200 dark:border-slate-700">
           <FolderOpen className="h-4 w-4 text-indigo-500 shrink-0" />
-          <span className="text-slate-500 dark:text-slate-400">Admin.</span>
+          <span className="text-slate-500 dark:text-slate-400">Extrajudiciales</span>
           <span className="font-bold text-slate-900 dark:text-white">{extrajudicialCases}</span>
         </div>
 
@@ -142,7 +147,7 @@ export default async function Home({ searchParams }: PageProps) {
       </div>
 
       {/* ══════════════════════════════════════════════════════
-          SEMÁFORO DE URGENCIAS
+          SEMAFORO DE URGENCIAS
           ══════════════════════════════════════════════════════ */}
       {hayUrgencias && (
         <div className="space-y-2">
@@ -154,11 +159,11 @@ export default async function Home({ searchParams }: PageProps) {
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">VENCIDO</span>
                   <p className="font-bold truncate">{evt.title}</p>
-                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
+                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} - {evt.case?.client?.lastName}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-xs font-mono opacity-75">{new Date(evt.date).toLocaleDateString('es-AR')}</p>
-                  <p className="text-sm font-bold">{Math.abs(getDaysDiff(evt.date))}d atrás</p>
+                  <p className="text-sm font-bold">{Math.abs(getDaysDiff(evt.date))}d atras</p>
                 </div>
                 <ChevronRight className="h-4 w-4 opacity-60" />
               </div>
@@ -172,7 +177,7 @@ export default async function Home({ searchParams }: PageProps) {
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">HOY</span>
                   <p className="font-bold truncate">{evt.title}</p>
-                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
+                  <p className="text-xs opacity-75 truncate">{evt.case?.caratula} - {evt.case?.client?.lastName}</p>
                 </div>
                 <p className="text-sm font-bold shrink-0">
                   {new Date(evt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
@@ -188,10 +193,10 @@ export default async function Home({ searchParams }: PageProps) {
                 <Clock className="h-5 w-5 shrink-0 text-orange-500" />
                 <div className="flex-1 min-w-0">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
-                    EN {getDaysDiff(evt.date)} DÍA{getDaysDiff(evt.date) > 1 ? 'S' : ''}
+                    EN {getDaysDiff(evt.date)} DIA{getDaysDiff(evt.date) > 1 ? 'S' : ''}
                   </span>
                   <p className="font-bold text-slate-900 dark:text-white truncate">{evt.title}</p>
-                  <p className="text-xs text-slate-500 truncate">{evt.case?.caratula} · {evt.case?.client?.lastName}</p>
+                  <p className="text-xs text-slate-500 truncate">{evt.case?.caratula} - {evt.case?.client?.lastName}</p>
                 </div>
                 <p className="text-xs font-mono text-slate-500 shrink-0">{new Date(evt.date).toLocaleDateString('es-AR')}</p>
                 <ChevronRight className="h-4 w-4 text-slate-400" />
@@ -222,7 +227,7 @@ export default async function Home({ searchParams }: PageProps) {
                 <div className="flex flex-col items-center justify-center py-8 text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-100 dark:border-emerald-900/50">
                   <CheckCircle2 className="h-8 w-8 mb-2" />
                   <span className="font-medium">
-                    {upcomingEvents.length === 0 ? 'Agenda despejada. Todo al día.' : 'No hay más eventos próximos.'}
+                    {upcomingEvents.length === 0 ? 'Agenda despejada. Todo al dia.' : 'No hay mas eventos proximos.'}
                   </span>
                 </div>
               ) : (
@@ -243,9 +248,9 @@ export default async function Home({ searchParams }: PageProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded uppercase">
-                                {evt.type === 'HEARING' ? 'Audiencia' : evt.type === 'DEADLINE' ? 'Plazo' : 'Reunión'}
+                                {evt.type === 'HEARING' ? 'Audiencia' : evt.type === 'DEADLINE' ? 'Plazo' : 'Reunion'}
                               </span>
-                              <span className="text-[10px] text-slate-400">en {days} días</span>
+                              <span className="text-[10px] text-slate-400">en {days} dias</span>
                             </div>
                             <p className="font-semibold text-slate-900 dark:text-white truncate">{evt.title}</p>
                             <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-0.5">
@@ -302,7 +307,7 @@ export default async function Home({ searchParams }: PageProps) {
                           {client.cases.length === 0 && <span className="text-[10px] text-slate-400 italic">Sin carpetas</span>}
                           {client.cases.slice(0, 3).map((c, i) => (
                             <span key={i} className={`text-[9px] font-bold px-2 py-0.5 rounded text-white ${c.isExtrajudicial ? 'bg-indigo-500' : 'bg-slate-700 dark:bg-slate-600'}`}>
-                              {c.isExtrajudicial ? 'ADMIN' : (c.area || 'CIVIL')}
+                              {c.isExtrajudicial ? 'EXTRAJUDICIAL' : (c.area || 'CIVIL')}
                             </span>
                           ))}
                           {client.cases.length > 3 && (
@@ -327,19 +332,19 @@ export default async function Home({ searchParams }: PageProps) {
           <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm border-t-4 border-t-emerald-500">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between">
-                Caja General <Wallet className="h-4 w-4 text-emerald-500" />
+                Resumen contable <Wallet className="h-4 w-4 text-emerald-500" />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Saldo acumulado</p>
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Saldo general</p>
                 <div className={`text-4xl font-extrabold tracking-tight ${balance >= 0 ? 'dark:text-white' : 'text-red-500'}`}>
                   {balance < 0 ? '-' : ''}$ {Math.abs(balance).toLocaleString("es-AR")}
                 </div>
               </div>
 
               <div className="space-y-2 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2">Acumulado total</p>
+                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-2">Totales historicos</p>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
                     <TrendingUp className="h-4 w-4 text-emerald-500" /> Ingresos
@@ -421,7 +426,7 @@ export default async function Home({ searchParams }: PageProps) {
                           <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{entry.description}</p>
                           <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">
                             {new Date(entry.date).toLocaleDateString('es-AR')}
-                            {entry.case && <span className="ml-1">· {entry.case.code}</span>}
+                            {entry.case && <span className="ml-1">- {entry.case.code}</span>}
                           </p>
                         </div>
                       </div>

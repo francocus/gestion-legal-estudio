@@ -21,11 +21,9 @@ import {
 } from "@/components/ui/select";
 import { CaseStatus } from "@prisma/client";
 import { editCase } from "@/lib/actions/cases";
-import { santaFeCourts } from "@/lib/santa-fe-courts";
 import {
   AlertTriangle,
   Briefcase,
-  Calculator,
   DollarSign,
   FileText,
   Gavel,
@@ -33,7 +31,6 @@ import {
   Link as LinkIcon,
   Pencil,
   Save,
-  Scale,
   ShieldAlert,
   StickyNote,
   Users,
@@ -52,30 +49,32 @@ export function EditCaseDialog({
     driveLink: string | null;
     area: string;
     description: string | null;
+    isExtrajudicial: boolean;
   };
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const VALOR_JUS = 118048.44;
   const [monto, setMonto] = useState(legalCase.totalFee || 0);
-  const [jus, setJus] = useState("");
 
-  const handleJusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cantJus = e.target.value;
-    setJus(cantJus);
-    if (cantJus && !isNaN(parseFloat(cantJus))) {
-      setMonto(Math.round(parseFloat(cantJus) * VALOR_JUS));
-    }
-  };
+  const judicialAreas = [
+    { value: "CIVIL", label: "Civil y Comercial", icon: Gavel },
+    { value: "FAMILIA", label: "Familia", icon: Users },
+    { value: "LABORAL", label: "Laboral", icon: Briefcase },
+    { value: "PENAL", label: "Penal", icon: ShieldAlert },
+    { value: "PREVISIONAL", label: "Previsional", icon: HeartHandshake },
+    { value: "ADMINISTRATIVO", label: "Administrativo", icon: FileText },
+  ];
 
-  const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cantPesos = e.target.value;
-    setMonto(cantPesos ? parseFloat(cantPesos) : 0);
-    if (cantPesos && !isNaN(parseFloat(cantPesos))) {
-      setJus((parseFloat(cantPesos) / VALOR_JUS).toFixed(2));
-    }
-  };
+  const extrajudicialAreas = [
+    { value: "INMOBILIARIO", label: "Inmobiliario", icon: FileText },
+    { value: "COBRANZAS", label: "Cobranzas y creditos", icon: DollarSign },
+    { value: "TRIBUTARIO", label: "Impuestos y Tributacion", icon: FileText },
+    { value: "RRHH", label: "Sueldos y Despidos", icon: Briefcase },
+    { value: "ACUERDOS", label: "Acuerdos", icon: FileText },
+  ];
+
+  const areaOptions = legalCase.isExtrajudicial ? extrajudicialAreas : judicialAreas;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -123,72 +122,41 @@ export function EditCaseDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="code" className="dark:text-gray-300">N Expediente</Label>
-              <Input id="code" name="code" defaultValue={legalCase.code || ""} required className="dark:bg-slate-900 dark:border-slate-800" />
+              <Label htmlFor="code" className="dark:text-gray-300">
+                {legalCase.isExtrajudicial ? "Referencia interna" : "Nro. de expediente"}
+              </Label>
+              <Input id="code" name="code" defaultValue={legalCase.code || ""} className="dark:bg-slate-900 dark:border-slate-800" />
             </div>
 
             <div className="grid gap-2 min-w-0">
-              <Label htmlFor="juzgado" className="dark:text-gray-300">Juzgado</Label>
-              <Select name="juzgado" defaultValue={legalCase.juzgado || "OTRO"}>
-                <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800 w-full max-w-[220px] sm:max-w-[270px] [&>span]:truncate text-left px-3">
-                  <span className="truncate block w-full">
-                    <SelectValue placeholder="Seleccionar Juzgado" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent className="dark:bg-slate-950 dark:border-slate-800 max-h-[300px] max-w-[400px]">
-                  {santaFeCourts.map((court) => (
-                    <SelectItem key={court} value={court} className="whitespace-normal">
-                      {court}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="OTRO">Otro / Fuera de Lista</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="juzgado" className="dark:text-gray-300">
+                {legalCase.isExtrajudicial ? "Organismo / contraparte / referencia" : "Organismo / tribunal"}
+              </Label>
+              <Input
+                id="juzgado"
+                name="juzgado"
+                defaultValue={legalCase.juzgado || ""}
+                placeholder={legalCase.isExtrajudicial ? "Ej: Acuerdo privado, mediacion, contraparte..." : "Ej: Tribunal Laboral Nro. 2"}
+                className="dark:bg-slate-900 dark:border-slate-800"
+              />
             </div>
           </div>
 
-          <div className="bg-slate-100 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Calculator className="h-4 w-4 text-blue-500" />
-              <span className="text-xs font-bold uppercase text-slate-500 tracking-wider">Regulacion de Honorarios</span>
+          <div className="grid gap-2">
+            <Label htmlFor="totalFee" className="dark:text-gray-300 flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <DollarSign className="h-3 w-3" /> Honorarios / monto estimado
+            </Label>
+            <div className="relative">
+              <Input
+                id="totalFee"
+                name="totalFee"
+                type="number"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value ? parseFloat(e.target.value) : 0)}
+                className="dark:bg-slate-900 dark:border-slate-800 font-bold text-emerald-600 dark:text-emerald-400 pl-6"
+              />
+              <span className="absolute left-2.5 top-2.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">$</span>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="jus" className="dark:text-gray-300 flex items-center gap-1 text-xs">
-                  <Scale className="h-3 w-3 text-blue-500" /> Cantidad JUS
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="jus"
-                    type="number"
-                    placeholder="Ej: 10"
-                    value={jus}
-                    onChange={handleJusChange}
-                    className="dark:bg-slate-900 dark:border-slate-800 pl-8 focus-visible:ring-blue-500"
-                  />
-                  <span className="absolute left-2.5 top-2.5 text-xs font-bold text-slate-400">J</span>
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="totalFee" className="dark:text-gray-300 flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  <DollarSign className="h-3 w-3" /> Total en Pesos
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="totalFee"
-                    name="totalFee"
-                    type="number"
-                    value={monto}
-                    onChange={handleMontoChange}
-                    className="dark:bg-slate-900 dark:border-slate-800 font-bold text-emerald-600 dark:text-emerald-400 pl-6"
-                  />
-                  <span className="absolute left-2.5 top-2.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">$</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2 text-right">Valor JUS Ref: $ {VALOR_JUS.toLocaleString()}</p>
           </div>
 
           <div className="grid gap-2">
@@ -213,18 +181,24 @@ export function EditCaseDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="area" className="dark:text-gray-300">Fuero / Materia</Label>
+            <Label htmlFor="area" className="dark:text-gray-300">
+              {legalCase.isExtrajudicial ? "Materia / tipo de gestion" : "Fuero / materia"}
+            </Label>
             <Select name="area" defaultValue={legalCase.area || "CIVIL"}>
               <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
-                <SelectValue placeholder="Fuero" />
+                <SelectValue placeholder="Seleccionar materia" />
               </SelectTrigger>
               <SelectContent className="dark:bg-slate-950 dark:border-slate-800">
-                <SelectItem value="CIVIL"><div className="flex items-center gap-2"><Gavel className="h-3.5 w-3.5" /> Civil y Comercial</div></SelectItem>
-                <SelectItem value="FAMILIA"><div className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Familia</div></SelectItem>
-                <SelectItem value="LABORAL"><div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5" /> Laboral</div></SelectItem>
-                <SelectItem value="PENAL"><div className="flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5" /> Penal</div></SelectItem>
-                <SelectItem value="PREVISIONAL"><div className="flex items-center gap-2"><HeartHandshake className="h-3.5 w-3.5" /> Previsional</div></SelectItem>
-                <SelectItem value="ADMINISTRATIVO"><div className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" /> Administrativo</div></SelectItem>
+                {areaOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-3.5 w-3.5" /> {option.label}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>

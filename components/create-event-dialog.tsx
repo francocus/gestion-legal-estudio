@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createAgendaEvent } from "@/lib/actions/agenda";
-// 👇 IMPORTACIÓN DE ICONOS
 import { CalendarPlus, Zap, Gavel, Users, Save } from "lucide-react";
 
 interface Props {
@@ -33,22 +32,22 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
     setError(null);
-    
-    const formData = new FormData(e.currentTarget);
+
+    const formData = new FormData(event.currentTarget);
     formData.append("caseId", caseId);
     formData.append("clientId", clientId);
-    
+
     const result = await createAgendaEvent(formData);
     if (!result.success) {
       setError(result.error);
       setLoading(false);
       return;
     }
-    
+
     setLoading(false);
     setOpen(false);
   };
@@ -56,92 +55,88 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {/* 🔴 ACCIÓN AGENDA: ROJO (Para denotar vencimientos/alertas) */}
         <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white font-bold gap-2 shadow-sm transition-all">
-            <CalendarPlus className="h-4 w-4" /> Agendar Vencimiento
+          <CalendarPlus className="h-4 w-4" /> Agendar vencimiento
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-[425px] dark:bg-slate-950 dark:border-slate-800">
         <DialogHeader>
-          <DialogTitle className="dark:text-white">Nuevo Evento en Agenda</DialogTitle>
+          <DialogTitle className="dark:text-white">Nuevo evento en agenda</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          
           <div className="grid gap-2">
-            <Label className="dark:text-gray-300">Tipo de Evento</Label>
+            <Label className="dark:text-gray-300">Tipo de evento</Label>
             <Select name="type" required defaultValue="DEADLINE">
               <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
                 <SelectValue placeholder="Seleccionar tipo..." />
               </SelectTrigger>
               <SelectContent className="dark:bg-slate-950 dark:border-slate-800">
                 <SelectItem value="DEADLINE">
-                    <div className="flex items-center gap-2 text-red-500 font-bold">
-                        <Zap className="h-4 w-4" /> Vencimiento (Plazo Fatal)
-                    </div>
+                  <div className="flex items-center gap-2 text-red-500 font-bold">
+                    <Zap className="h-4 w-4" /> Vencimiento (plazo fatal)
+                  </div>
                 </SelectItem>
                 <SelectItem value="HEARING">
-                    <div className="flex items-center gap-2 text-blue-500 font-bold">
-                        <Gavel className="h-4 w-4" /> Audiencia
-                    </div>
+                  <div className="flex items-center gap-2 text-blue-500 font-bold">
+                    <Gavel className="h-4 w-4" /> Audiencia
+                  </div>
                 </SelectItem>
                 <SelectItem value="MEETING">
-                    <div className="flex items-center gap-2 text-amber-500 font-bold">
-                        <Users className="h-4 w-4" /> Reunión
-                    </div>
+                  <div className="flex items-center gap-2 text-amber-500 font-bold">
+                    <Users className="h-4 w-4" /> Reunion
+                  </div>
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="title" className="dark:text-gray-300">Título</Label>
-            <Input 
-                id="title" 
-                name="title" 
-                placeholder="Ej: Contestación de demanda" 
-                required 
-                className="dark:bg-slate-900 dark:border-slate-800" 
+            <Label htmlFor="title" className="dark:text-gray-300">Titulo</Label>
+            <Input
+              id="title"
+              name="title"
+              placeholder="Ej: Contestacion de demanda"
+              required
+              className="dark:bg-slate-900 dark:border-slate-800"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date" className="dark:text-gray-300">Fecha y Hora</Label>
-            <Input 
-                id="date" 
-                name="date" 
-                type="datetime-local" 
-                required 
-                className="dark:bg-slate-900 dark:border-slate-800 block w-full" 
+            <Label htmlFor="date" className="dark:text-gray-300">Fecha y hora</Label>
+            <Input
+              id="date"
+              name="date"
+              type="datetime-local"
+              required
+              className="dark:bg-slate-900 dark:border-slate-800 block w-full"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="description" className="dark:text-gray-300">Notas / Qué llevar</Label>
-            <Textarea 
-                id="description" 
-                name="description" 
-                placeholder="Detalles importantes..." 
-                className="dark:bg-slate-900 dark:border-slate-800 min-h-[100px]" 
+            <Label htmlFor="description" className="dark:text-gray-300">Notas / que llevar</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="Detalles importantes..."
+              className="dark:bg-slate-900 dark:border-slate-800 min-h-[100px]"
             />
           </div>
 
-          {/* 🔴 BOTÓN GUARDAR: ROJO (Coherencia con el tipo de acción) */}
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading}
             className="w-full bg-red-600 hover:bg-red-700 text-white font-bold mt-2 gap-2"
           >
             {loading ? "Guardando..." : (
-                <>
-                    <Save className="h-4 w-4" /> Guardar en Agenda
-                </>
+              <>
+                <Save className="h-4 w-4" /> Guardar en agenda
+              </>
             )}
           </Button>
 
           {error && <p className="text-sm text-red-500">{error}</p>}
-
         </form>
       </DialogContent>
     </Dialog>

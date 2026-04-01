@@ -8,64 +8,50 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// 1. EL CLIENTE
 model Client {
-  id          String    @id @default(cuid())
-  
-  // --- IDENTIFICACIÓN OBLIGATORIA ---
+  id          String   @id @default(cuid())
   firstName   String
   lastName    String
-  
-  // Documento (Tipo y Número)
-  docType     String    @default("DNI") // DNI, LE, LC, PAS, CI, CF
-  dni         String?   @unique         // El número del documento
-  
-  // --- DATOS ADICIONALES (Opcionales) ---
-  cuit        String?   @unique         // CUIT/CUIL
-  gender      String?   // Sexo
-  birthDate   DateTime? // Fecha de nacimiento
-  birthPlace  String?   // Lugar de nacimiento
-  nationality String?   @default("Argentina")
-  occupation  String?   // Ocupación
+  docType     String   @default("DNI")
+  dni         String?  @unique
+  cuit        String?  @unique
+  gender      String?
+  birthDate   DateTime?
+  birthPlace  String?
+  nationality String?  @default("Argentina")
+  occupation  String?
   civilStatus String?
-  
-  // --- UBICACIÓN Y CONTACTO ---
-  address     String?   // Calle y altura
-  location    String?   // Ciudad
+  address     String?
+  location    String?
   email       String?
-  phone       String?   // Teléfono principal
-  familyPhone String?   // Teléfono de urgencia/familiar
-
-  createdAt   DateTime  @default(now())
+  phone       String?
+  familyPhone String?
+  createdAt   DateTime @default(now())
   cases       Case[]
 }
 
-// 2. EL EXPEDIENTE / CASO / CARPETA ADMINISTRATIVA
 model Case {
-  id              String         @id @default(cuid())
-  code            String?        // <-- AHORA ES OPCIONAL
+  id              String           @id @default(cuid())
+  code            String?
   caratula        String
-  juzgado         String?        // <-- AHORA ES OPCIONAL
+  juzgado         String?
   description     String?
-  status          CaseStatus     @default(ACTIVE)
-  isExtrajudicial Boolean        @default(false) // <-- NUEVO: Diferencia juicios de trámites/inmobiliaria
-  totalFee        Int?           @default(0)
+  status          CaseStatus       @default(ACTIVE)
+  isExtrajudicial Boolean          @default(false)
+  totalFee        Int?             @default(0)
   driveLink       String?
-  area            String         @default("CIVIL")
-  
+  area            String           @default("CIVIL")
   clientId        String
-  client          Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  
-  events          Event[]        // Agenda
-  movements       Movement[]     // Historial
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  events          Event[]
+  movements       Movement[]
   transactions    Transaction[]
   notes           Note[]
   entries         AccountEntry[]
-  
-  createdAt       DateTime       @default(now())
+  legalSources    CaseLegalSource[]
+  createdAt       DateTime         @default(now())
 }
 
-// 3. LA AGENDA UNIFICADA
 model Event {
   id          String    @id @default(cuid())
   title       String
@@ -73,24 +59,18 @@ model Event {
   type        EventType
   description String?
   isDone      Boolean   @default(false)
-
-  // AL HACERLO OPCIONAL (?), PERMITIMOS EVENTOS PERSONALES/RUTINA
   caseId      String?
   case        Case?     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
-// 4. HISTORIAL / MOVIMIENTOS
 model Movement {
   id          String   @id @default(cuid())
-  title       String   // Ej: "Cédula recibida"
-  description String?  // Ej: "El juzgado pide..."
+  title       String
+  description String?
   date        DateTime @default(now())
-  
   caseId      String
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
-
-// --- ENUMS ---
 
 enum CaseStatus {
   ACTIVE
@@ -99,11 +79,9 @@ enum CaseStatus {
 }
 
 enum EventType {
-  // Judiciales / Profesionales
   HEARING
   DEADLINE
   MEETING
-  // Personales / Rutina (Nuevos)
   PERSONAL
   MEDICAL
   SOCIAL
@@ -112,78 +90,76 @@ enum EventType {
 
 model Transaction {
   id          String   @id @default(cuid())
-  amount      Float    // El monto (ej: 5000.50)
-  type        String   // "INCOME" (Entrada) o "EXPENSE" (Salida)
-  description String   // "Adelanto de gastos"
+  amount      Float
+  type        String
+  description String
   date        DateTime @default(now())
-
   caseId      String
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
-// 5. USUARIOS DEL SISTEMA (ABOGADOS)
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String   // Acá guardaremos la contraseña encriptada ($2b$10$...)
+  password  String
   name      String?
-  role      String   @default("ADMIN") // Por si después querés empleados con menos permisos
-  
+  role      String   @default("ADMIN")
   createdAt DateTime @default(now())
 }
 
 model Note {
   id        String   @id @default(cuid())
   content   String
-  type      String   @default("TEXT") // "TEXT" o "VOICE"
+  type      String   @default("TEXT")
   createdAt DateTime @default(now())
-
   caseId    String
   case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
-// LIBRO CONTABLE — ENTRADA DE DEBE/HABER
 model AccountEntry {
   id          String   @id @default(cuid())
   date        DateTime @default(now())
   description String
-  concept     String   // Ej: "Honorarios", "Gastos bancarios", "Sueldo", etc.
-  debe        Float    @default(0) // Egreso / Pasivo
-  haber       Float    @default(0) // Ingreso / Activo
-  
-  // Relación OPCIONAL con expediente (null = entrada general del estudio)
+  concept     String
+  debe        Float    @default(0)
+  haber       Float    @default(0)
   caseId      String?
   case        Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
-
   createdAt   DateTime @default(now())
 }
 
-// 6. BIBLIOTECA JURÍDICA (Leyes, Códigos, Fallos)
 model LegalSource {
-  id              String   @id @default(cuid())
-  title           String   // Ej: "Ley de Contrato de Trabajo N° 20.744" o "Fallo CSJN..."
+  id              String           @id @default(cuid())
+  title           String
   type            LegalSourceType
-  area            String   // Ej: "CIVIL", "PENAL", "LABORAL", "COMERCIAL"
-  country         String   @default("Argentina")
-  
-  content         String   // El texto completo o extracto principal
-  sourceUrl       String?  // Link oficial (ej. InfoLeg, CSJN)
-  publicationDate DateTime? // Fecha de sanción o del fallo
-  
-  // --- PREPARACIÓN PARA EL MÓDULO DE IA ---
-  lastAiCheck     DateTime? // Cuándo fue la última vez que el bot revisó si hay cambios
-  isOutdated      Boolean   @default(false) // Se pone en true si la IA detecta una modificatoria
-  previousText    String?   // Acá la IA guardará "la idea de los perros que legislaron" (texto derogado)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  area            String
+  country         String           @default("Argentina")
+  content         String
+  sourceUrl       String?
+  publicationDate DateTime?
+  lastAiCheck     DateTime?
+  isOutdated      Boolean          @default(false)
+  previousText    String?
+  cases           CaseLegalSource[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 }
 
-// Opciones de tipo de documento legal
+model CaseLegalSource {
+  id            String      @id @default(cuid())
+  caseId        String
+  legalSourceId String
+  createdAt     DateTime    @default(now())
+  case          Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  legalSource   LegalSource @relation(fields: [legalSourceId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, legalSourceId])
+}
+
 enum LegalSourceType {
-  LAW           // Leyes Especiales
-  CODE          // Códigos (Fondo y Forma)
-  CONSTITUTION  // Constituciones
-  JURISPRUDENCE // Fallos / CIAJ
-  OTHER         // Otros documentos
+  LAW
+  CODE
+  CONSTITUTION
+  JURISPRUDENCE
+  OTHER
 }

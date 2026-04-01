@@ -5,6 +5,11 @@ import { ACTION_OK, actionError, ActionResult } from "@/lib/actions/action-resul
 
 type RevalidatePath = (path: string) => void;
 
+function parseLocalAccountingDate(value: string) {
+  if (!value) return new Date(NaN);
+  return new Date(`${value}T12:00:00`);
+}
+
 export async function createAgendaEventWithDeps(
   formData: FormData,
   deps: {
@@ -278,6 +283,10 @@ export interface AccountEntryInput {
   caseId?: string;
 }
 
+export interface UpdateAccountEntryInput extends AccountEntryInput {
+  id: string;
+}
+
 export async function createAccountEntryWithDeps(
   data: AccountEntryInput,
   deps: {
@@ -292,7 +301,7 @@ export async function createAccountEntryWithDeps(
     revalidatePath: RevalidatePath;
   }
 ): Promise<{ success: true; entry: unknown } | { success: false; error: string }> {
-  const date = new Date(data.date);
+  const date = parseLocalAccountingDate(data.date);
 
   if (!data.description.trim() || Number.isNaN(date.getTime())) {
     return { success: false, error: "Faltan datos obligatorios del movimiento contable." };
@@ -331,6 +340,45 @@ export async function deleteAccountEntryWithDeps(
   }
 
   return true;
+}
+
+export async function updateAccountEntryWithDeps(
+  data: UpdateAccountEntryInput,
+  deps: {
+    updateAccountEntry(id: string, data: {
+      date: Date;
+      description: string;
+      concept: string;
+      debe: number;
+      haber: number;
+      caseId: string | null;
+    }): Promise<unknown>;
+  }
+): Promise<ActionResult> {
+  const date = parseLocalAccountingDate(data.date);
+
+  if (!data.id) {
+    return actionError("No se pudo identificar el movimiento contable.");
+  }
+
+  if (!data.description.trim() || Number.isNaN(date.getTime())) {
+    return actionError("Faltan datos obligatorios del movimiento contable.");
+  }
+
+  if (data.debe <= 0 && data.haber <= 0) {
+    return actionError("Tenes que indicar un ingreso o un egreso mayor a cero.");
+  }
+
+  await deps.updateAccountEntry(data.id, {
+    date,
+    description: data.description,
+    concept: data.concept,
+    debe: data.debe,
+    haber: data.haber,
+    caseId: data.caseId || null,
+  });
+
+  return ACTION_OK;
 }
 
 export async function editCaseWithDeps(
@@ -383,6 +431,7 @@ export async function createLegalSourceWithDeps(
       country: string;
       content: string;
       sourceUrl: string | null;
+      publicationDate: Date | null;
     }): Promise<unknown>;
     revalidatePath: RevalidatePath;
   }
@@ -392,13 +441,23 @@ export async function createLegalSourceWithDeps(
   const area = getRequiredString(formData, "area");
   const content = getRequiredString(formData, "content");
   const sourceUrl = getOptionalString(formData, "sourceUrl");
+  const publicationDateRaw = getOptionalString(formData, "publicationDate");
   const country = getStringWithDefault(formData, "country", "Argentina");
 
   if (!title || !rawType || !area || !content) {
     return actionError("Faltan datos obligatorios de la fuente juridica.");
   }
 
+  if (!["Argentina", "Paraguay"].includes(country)) {
+    return actionError("La biblioteca solo admite fuentes de Argentina o Paraguay.");
+  }
+
   const type = rawType as LegalSourceType;
+  const publicationDate = publicationDateRaw ? new Date(`${publicationDateRaw}T12:00:00`) : null;
+
+  if (publicationDate && Number.isNaN(publicationDate.getTime())) {
+    return actionError("La fecha de publicacion es invalida.");
+  }
 
   await deps.createLegalSource({
     title,
@@ -407,6 +466,7 @@ export async function createLegalSourceWithDeps(
     country,
     content,
     sourceUrl: sourceUrl || null,
+    publicationDate,
   });
 
   deps.revalidatePath("/biblioteca");
@@ -482,4 +542,44 @@ export async function deleteNoteWithDeps(
 
   await deps.deleteNote(noteId);
   deps.revalidatePath(`/client/${clientId}/case/${caseId}`);
+}
+
+export async function attachLegalSourceToCaseWithDeps(
+  formData: FormData,
+  deps: {
+    attach(caseId: string, legalSourceId: string): Promise<unknown>;
+    revalidatePath: RevalidatePath;
+  }
+): Promise<ActionResult> {
+  const caseId = getRequiredString(formData, "caseId");
+  const clientId = getRequiredString(formData, "clientId");
+  const legalSourceId = getRequiredString(formData, "legalSourceId");
+
+  if (!caseId || !clientId || !legalSourceId) {
+    return actionError("No se pudo vincular la fuente juridica al expediente.");
+  }
+
+  await deps.attach(caseId, legalSourceId);
+  deps.revalidatePath(`/client/${clientId}/case/${caseId}`);
+  return ACTION_OK;
+}
+
+export async function detachLegalSourceFromCaseWithDeps(
+  formData: FormData,
+  deps: {
+    detach(caseId: string, legalSourceId: string): Promise<unknown>;
+    revalidatePath: RevalidatePath;
+  }
+): Promise<ActionResult> {
+  const caseId = getRequiredString(formData, "caseId");
+  const clientId = getRequiredString(formData, "clientId");
+  const legalSourceId = getRequiredString(formData, "legalSourceId");
+
+  if (!caseId || !clientId || !legalSourceId) {
+    return actionError("No se pudo desvincular la fuente juridica del expediente.");
+  }
+
+  await deps.detach(caseId, legalSourceId);
+  deps.revalidatePath(`/client/${clientId}/case/${caseId}`);
+  return ACTION_OK;
 }

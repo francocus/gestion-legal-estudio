@@ -15,9 +15,9 @@ export async function authenticate(prevState: string | undefined, formData: Form
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
-          return "Credenciales invÃ¡lidas.";
+          return "Credenciales invalidas.";
         default:
-          return "Algo saliÃ³ mal.";
+          return "Algo salio mal.";
       }
     }
 

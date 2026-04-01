@@ -26,6 +26,23 @@ export async function editCase(formData: FormData) {
   });
 }
 
+export async function updateCaseFee(caseId: string, clientId: string, totalFee: number) {
+  if (!caseId || !clientId) {
+    return { success: false as const, error: "No se pudo identificar el expediente." };
+  }
+
+  await db.case.update({
+    where: { id: caseId },
+    data: { totalFee },
+  });
+
+  revalidatePath("/contabilidad");
+  revalidatePath(`/client/${clientId}`);
+  revalidatePath(`/client/${clientId}/case/${caseId}`);
+
+  return { success: true as const };
+}
+
 export async function deleteCase(formData: FormData) {
   const id = getRequiredString(formData, "id");
   const clientId = getRequiredString(formData, "clientId");

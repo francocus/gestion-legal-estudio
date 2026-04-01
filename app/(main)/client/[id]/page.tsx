@@ -112,7 +112,7 @@ export default async function ClientPage({ params }: PageProps) {
                             <MapPin className="h-4 w-4 text-red-500" /> Domicilio
                         </p>
                         <p className="text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-950 p-3 rounded border border-gray-200 dark:border-slate-800 shadow-sm font-medium">
-                            {client.address || "Calle s/n"}, {client.location || "Santa Fe"}
+                            {client.address || "Domicilio no cargado"}{client.location ? `, ${client.location}` : ""}
                         </p>
                     </div>
 

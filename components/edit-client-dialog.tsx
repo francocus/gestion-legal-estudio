@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updateClient } from "@/lib/actions/clients";
-import { santaFeCities } from "@/lib/santa-fe-cities";
 import { AlertTriangle, Pencil } from "lucide-react";
 
 interface Props {
@@ -163,18 +162,7 @@ export function EditClientDialog({ client }: Props) {
             </div>
             <div className="grid gap-2">
               <Label className="dark:text-gray-300">Ciudad</Label>
-              <Select name="location" defaultValue={client.location || "EMPTY_SELECTION"}>
-                <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
-                  <SelectValue placeholder="Ciudad..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] dark:bg-slate-900 dark:border-slate-800">
-                  <SelectItem value="EMPTY_SELECTION" className="text-gray-400">-- No especificar --</SelectItem>
-                  {santaFeCities.map((city) => (
-                    <SelectItem key={city} value={city}>{city}</SelectItem>
-                  ))}
-                  <SelectItem value="OTRA">Otra / Fuera de Sta Fe</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input name="location" defaultValue={client.location || ""} placeholder="Ciudad / Provincia / Pais" className="dark:bg-slate-900 dark:border-slate-800" />
             </div>
           </div>
 
