@@ -1,0 +1,2 @@
+ALTER TABLE "LegalSource"
+ADD COLUMN "ingestionMode" TEXT NOT NULL DEFAULT 'MANUAL';

@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { buildOfficialLegalSnapshot, extractReadableLegalTextFromHtml } from "@/lib/legal-source-fetch";
+import {
+  buildOfficialLegalSnapshot,
+  extractArgentinaOfficialUrlFromSearchHtml,
+  extractReadableLegalTextFromHtml,
+  inferArgentinaLawNumber,
+} from "@/lib/legal-source-fetch";
 import { detectOfficialLegalSource, detectOfficialStatusSignals } from "@/lib/legal-source-officials";
 
 async function runTest(name: string, fn: () => Promise<void> | void) {
@@ -53,8 +58,28 @@ void (async () => {
     );
 
     assert.equal(snapshot.normalizedTitle, "Ley 22278 - Minoridad regimen penal");
+    assert.equal(snapshot.officialNumber, "22278");
+    assert.equal(snapshot.officialName, "Minoridad regimen penal");
+    assert.equal(snapshot.validityStatus, "Derogada");
+    assert.equal(snapshot.relatedRule, "Ley 27801");
     assert.match(snapshot.normalizedContent, /Resumen oficial:/);
     assert.match(snapshot.normalizedContent, /Observaciones oficiales:/);
     assert.doesNotMatch(snapshot.normalizedContent, /PODER EJECUTIVO NACIONAL/);
+  });
+
+  await runTest("inferArgentinaLawNumber detects a law number from free text", () => {
+    const lawNumber = inferArgentinaLawNumber("ley de regimen juvenil 22278", "texto libre");
+    assert.equal(lawNumber, "22278");
+  });
+
+  await runTest("extractArgentinaOfficialUrlFromSearchHtml finds official argentina normativa url", () => {
+    const html = `
+      <a href="https://www.argentina.gob.ar/normativa/nacional/ley-27801-423722/texto">
+        Ley 27801
+      </a>
+    `;
+
+    const url = extractArgentinaOfficialUrlFromSearchHtml(html, "27801");
+    assert.equal(url, "https://www.argentina.gob.ar/normativa/nacional/ley-27801-423722/texto");
   });
 })();

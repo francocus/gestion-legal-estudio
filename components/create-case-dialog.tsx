@@ -151,7 +151,7 @@ export function CreateCaseDialog({ clientId }: { clientId: string }) {
 
           <div className="grid gap-2 animate-in fade-in">
             <Label htmlFor="area" className="dark:text-gray-300">
-              {isExtrajudicial ? "Tipo de gestion" : "Fuero / Materia"}
+              {isExtrajudicial ? "Tipo de gestion" : "Fuero / Materia"} <span className="text-red-500">*</span>
             </Label>
 
             <Select name="area" value={area} onValueChange={setArea} required>

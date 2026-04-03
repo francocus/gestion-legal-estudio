@@ -22,7 +22,7 @@ export default async function BibliotecaPage() {
             Biblioteca Juridica
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Fuentes juridicas de Argentina y Paraguay, organizadas por materia, tipo y estado de revision.
+            Base juridica de Argentina y Paraguay, organizada por materia, tipo de fuente y vinculacion con expedientes.
           </p>
         </div>
 

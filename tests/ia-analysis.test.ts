@@ -5,6 +5,7 @@ import {
   organizeCaseNotesWithDeps,
   analyzeLegalSourceSnapshotWithDeps,
   analyzeOfficialLegalSourceVerificationWithDeps,
+  summarizeOfficialLegalSourceWithDeps,
 } from "@/lib/actions/ia";
 import {
   buildLegalAnalysisPrompt,
@@ -173,6 +174,42 @@ void (async () => {
     );
 
     assert.deepEqual(result, { success: true, status: "REVISAR" });
+  });
+
+  await runTest("summarizeOfficialLegalSourceWithDeps returns structured summary", async () => {
+    const result = await summarizeOfficialLegalSourceWithDeps(
+      {
+        title: "Ley 27610",
+        country: "Argentina",
+        area: "CIVIL",
+        type: "LAW",
+        officialContent: "Texto oficial extenso de prueba.",
+      },
+      {
+        async generateContent() {
+          return {
+            response: {
+              text() {
+                return JSON.stringify({
+                  titulo_sugerido: "Ley 27610 - Interrupcion voluntaria del embarazo",
+                  sintesis: "Reconoce y regula el acceso a la interrupcion voluntaria del embarazo dentro de los plazos y condiciones legales.",
+                  tipo_sugerido: "LAW",
+                  materia_sugerida: "CIVIL",
+                });
+              },
+            },
+          };
+        },
+      }
+    );
+
+    assert.deepEqual(result, {
+      success: true,
+      summary: "Reconoce y regula el acceso a la interrupcion voluntaria del embarazo dentro de los plazos y condiciones legales.",
+      suggestedTitle: "Ley 27610 - Interrupcion voluntaria del embarazo",
+      suggestedType: "LAW",
+      suggestedArea: "CIVIL",
+    });
   });
 
   await runTest("analyzeCaseWithDeps returns structured case analysis", async () => {

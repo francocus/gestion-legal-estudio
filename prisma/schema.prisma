@@ -131,12 +131,17 @@ model AccountEntry {
 model LegalSource {
   id              String           @id @default(cuid())
   title           String
+  officialNumber  String?
+  officialName    String?
   type            LegalSourceType
   area            String
   country         String           @default("Argentina")
   content         String
+  officialText    String?
   sourceUrl       String?
   publicationDate DateTime?
+  validityStatus  String?
+  relatedRule     String?
   lastAiCheck     DateTime?
   isOutdated      Boolean          @default(false)
   previousText    String?

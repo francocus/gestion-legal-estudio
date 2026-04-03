@@ -1,5 +1,5 @@
 export type ActionResult =
-  | { success: true; message?: string }
+  | { success: true; message?: string; id?: string }
   | { success: false; error: string };
 
 export const ACTION_OK: ActionResult = { success: true };

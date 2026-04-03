@@ -67,7 +67,7 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label className="dark:text-gray-300">Tipo de evento</Label>
+            <Label className="dark:text-gray-300">Tipo de evento <span className="text-red-500">*</span></Label>
             <Select name="type" required defaultValue="DEADLINE">
               <SelectTrigger className="dark:bg-slate-900 dark:border-slate-800">
                 <SelectValue placeholder="Seleccionar tipo..." />
@@ -93,7 +93,7 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="title" className="dark:text-gray-300">Titulo</Label>
+            <Label htmlFor="title" className="dark:text-gray-300">Titulo <span className="text-red-500">*</span></Label>
             <Input
               id="title"
               name="title"
@@ -104,7 +104,7 @@ export function CreateEventDialog({ caseId, clientId }: Props) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="date" className="dark:text-gray-300">Fecha y hora</Label>
+            <Label htmlFor="date" className="dark:text-gray-300">Fecha y hora <span className="text-red-500">*</span></Label>
             <Input
               id="date"
               name="date"

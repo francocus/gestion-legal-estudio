@@ -5,102 +5,60 @@ import { revalidatePath } from "next/cache";
 import {
   createLegalSourceWithDeps,
   deleteLegalSourceWithDeps,
+  validateManualLegalSourceWithDeps,
+  verifyOfficialLegalSourceUpdateWithDeps,
 } from "@/lib/actions/services";
 import { ActionResult } from "@/lib/actions/action-result";
-import { analyzeLegalSourceSnapshot, analyzeOfficialLegalSourceVerification } from "@/lib/actions/ia";
-import { buildOfficialLegalSnapshot, fetchOfficialLegalText } from "@/lib/legal-source-fetch";
-import { detectOfficialLegalSource, detectOfficialStatusSignals } from "@/lib/legal-source-officials";
+import { fetchOfficialLegalText } from "@/lib/legal-source-fetch";
+import {
+  analyzeLegalSourceSnapshot,
+  analyzeOfficialLegalSourceVerification,
+  summarizeOfficialLegalSource,
+  summarizeManualLegalSource,
+} from "@/lib/actions/ia";
+import { detectOfficialLegalSource } from "@/lib/legal-source-officials";
 
 export async function createLegalSource(formData: FormData): Promise<ActionResult> {
-  let createdSourceId: string | null = null;
-  let createdTitle: string | null = null;
-  let createdContent: string | null = null;
-  let createdCountry: string | null = null;
-  let createdArea: string | null = null;
-  let createdType: string | null = null;
-  let createdSourceUrl: string | null = null;
+  const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
+  const loadMode = String(formData.get("loadMode") ?? "AUTO");
+  const country = String(formData.get("country") ?? "Argentina");
+  const effectiveSourceUrl = sourceUrl;
+
+  if (loadMode === "AUTO") {
+    if (!effectiveSourceUrl) {
+      return {
+        success: false,
+        error: country === "Argentina"
+          ? "En la carga automatica tenes que pegar el link oficial de InfoLEG."
+          : "En la carga automatica tenes que pegar el link oficial de una fuente valida de Paraguay.",
+      };
+    }
+
+    if (effectiveSourceUrl && !detectOfficialLegalSource(effectiveSourceUrl, country).preferred) {
+      return {
+        success: false,
+        error: country === "Argentina"
+          ? "El link cargado no corresponde a una fuente oficial valida de InfoLEG."
+          : "El link cargado no corresponde a una fuente oficial valida de Paraguay.",
+      };
+    }
+  }
 
   const result = await createLegalSourceWithDeps(formData, {
     createLegalSource: async (data) => {
-      const source = await db.legalSource.create({ data });
-      createdSourceId = source.id;
-      createdTitle = source.title;
-      createdContent = source.content;
-      createdCountry = source.country;
-      createdArea = source.area;
-      createdType = source.type;
-      createdSourceUrl = source.sourceUrl;
-      return source;
+      return db.legalSource.create({ data });
     },
     revalidatePath,
   });
 
-  if (
-    result.success &&
-    createdSourceId &&
-    createdTitle &&
-    createdContent &&
-    createdCountry &&
-    createdArea &&
-    createdType
-  ) {
-    const originalContent = createdContent as string;
-    let contentToAnalyze: string = originalContent;
-    let fetchedOfficialText: string | null = null;
-    const officialSource = detectOfficialLegalSource(createdSourceUrl, createdCountry);
-
-    if (createdSourceUrl) {
-      fetchedOfficialText = await fetchOfficialLegalText(createdSourceUrl);
-    }
-
-    if (fetchedOfficialText && fetchedOfficialText !== originalContent) {
-      const officialSnapshot = buildOfficialLegalSnapshot(createdSourceUrl ?? "", fetchedOfficialText, createdCountry);
-      await db.legalSource.update({
-        where: { id: createdSourceId },
-        data: {
-          title: officialSnapshot.normalizedTitle ?? createdTitle,
-          previousText: originalContent,
-          content: officialSnapshot.normalizedContent,
-        },
-      });
-      createdTitle = officialSnapshot.normalizedTitle ?? createdTitle;
-      contentToAnalyze = officialSnapshot.normalizedContent;
-      fetchedOfficialText = officialSnapshot.officialText;
-    }
-
-    const statusSignals = fetchedOfficialText ? detectOfficialStatusSignals(fetchedOfficialText) : { shouldReview: false };
-
-    const aiResult = statusSignals.shouldReview
-      ? { success: true as const, status: "REVISAR" as const }
-      : fetchedOfficialText && officialSource.recognized
-        ? await analyzeOfficialLegalSourceVerification({
-            title: createdTitle,
-            content: contentToAnalyze,
-            originalContent,
-            officialContent: fetchedOfficialText,
-            sourceUrl: createdSourceUrl ?? "",
-            country: createdCountry,
-            area: createdArea,
-            type: createdType,
-          })
-        : await analyzeLegalSourceSnapshot({
-            title: createdTitle,
-            content: contentToAnalyze,
-            country: createdCountry,
-            area: createdArea,
-            type: createdType,
-          });
-
-    if (aiResult.success) {
-      await db.legalSource.update({
-        where: { id: createdSourceId },
-        data: {
-          lastAiCheck: new Date(),
-          isOutdated: aiResult.status === "REVISAR",
-        },
-      });
+  if (result.success && result.id && detectOfficialLegalSource(effectiveSourceUrl, country).preferred) {
+    const syncResult = await verifyOfficialLegalSourceUpdate(result.id);
+    if (!syncResult.success) {
+      await db.legalSource.delete({ where: { id: result.id } });
       revalidatePath("/biblioteca");
+      return syncResult;
     }
+    return syncResult;
   }
 
   return result;
@@ -109,6 +67,104 @@ export async function createLegalSource(formData: FormData): Promise<ActionResul
 export async function deleteLegalSource(id: string) {
   await deleteLegalSourceWithDeps(id, {
     deleteLegalSource: (legalSourceId) => db.legalSource.delete({ where: { id: legalSourceId } }),
+    revalidatePath,
+  });
+}
+
+export async function verifyOfficialLegalSourceUpdate(id: string): Promise<ActionResult> {
+  return verifyOfficialLegalSourceUpdateWithDeps(id, {
+    findLegalSource(legalSourceId) {
+      return db.legalSource.findUnique({
+        where: { id: legalSourceId },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          area: true,
+          country: true,
+          content: true,
+          officialText: true,
+          sourceUrl: true,
+          publicationDate: true,
+          officialNumber: true,
+          officialName: true,
+          validityStatus: true,
+          relatedRule: true,
+          previousText: true,
+        },
+      });
+    },
+    fetchOfficialText(sourceUrl) {
+      return fetchOfficialLegalText(sourceUrl);
+    },
+    analyzeOfficialVerification(input) {
+      return analyzeOfficialLegalSourceVerification({
+        title: input.title,
+        content: input.content,
+        country: input.country,
+        area: input.area,
+        type: input.type,
+        originalContent: input.content,
+        officialContent: input.officialContent,
+        sourceUrl: input.sourceUrl,
+      });
+    },
+    summarizeOfficialText(input) {
+      return summarizeOfficialLegalSource({
+        title: input.title,
+        country: input.country,
+        area: input.area,
+        type: input.type,
+        officialContent: input.officialContent,
+      });
+    },
+    updateLegalSource(legalSourceId, data) {
+      return db.legalSource.update({
+        where: { id: legalSourceId },
+        data,
+      });
+    },
+    revalidatePath,
+  });
+}
+
+export async function validateManualLegalSource(id: string): Promise<ActionResult> {
+  return validateManualLegalSourceWithDeps(id, {
+    findLegalSource(legalSourceId) {
+      return db.legalSource.findUnique({
+        where: { id: legalSourceId },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          area: true,
+          country: true,
+          content: true,
+          sourceUrl: true,
+          officialNumber: true,
+          publicationDate: true,
+        },
+      });
+    },
+    analyzeSnapshot(input) {
+      return analyzeLegalSourceSnapshot(input);
+    },
+    summarizeManual(input) {
+      return summarizeManualLegalSource({
+        title: input.title,
+        country: input.country,
+        area: input.area,
+        type: input.type,
+        content: input.content,
+        officialNumber: input.officialNumber,
+      });
+    },
+    updateLegalSource(legalSourceId, data) {
+      return db.legalSource.update({
+        where: { id: legalSourceId },
+        data,
+      });
+    },
     revalidatePath,
   });
 }

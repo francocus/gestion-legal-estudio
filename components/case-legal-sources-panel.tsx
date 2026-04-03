@@ -14,11 +14,13 @@ import {
 interface LinkedLegalSource {
   id: string;
   title: string;
+  officialNumber?: string | null;
+  officialName?: string | null;
   type: LegalSourceType;
   area: string;
   country: string;
+  officialText?: string | null;
   sourceUrl: string | null;
-  isOutdated: boolean;
   content?: string;
   previousText?: string | null;
 }
@@ -34,15 +36,15 @@ interface CaseLegalSourcesPanelProps {
 function sourceTypeLabel(type: LegalSourceType) {
   switch (type) {
     case "LAW":
-      return "Ley";
+      return "Ley especial";
     case "CODE":
       return "Codigo";
     case "CONSTITUTION":
       return "Constitucion";
     case "JURISPRUDENCE":
-      return "Jurisprudencia";
+      return "Fallo";
     default:
-      return "Fuente";
+      return "Otra fuente";
   }
 }
 
@@ -104,7 +106,7 @@ export function CaseLegalSourcesPanel({
             Fuentes juridicas vinculadas
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Relaciona normas, codigos y fallos con este expediente para tener contexto juridico directo.
+            Relaciona leyes, codigos, constituciones y fallos con este expediente para tener contexto juridico directo.
           </p>
         </div>
         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -132,55 +134,78 @@ export function CaseLegalSourcesPanel({
             {linkedSources.map((source) => (
               <div
                 key={source.id}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40 p-4 flex flex-col gap-4"
               >
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                      {sourceTypeLabel(source.type)}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      {source.country}
-                    </span>
-                    {source.isOutdated && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                        Actualizada por IA
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        {source.country}
                       </span>
-                    )}
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {source.area}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        {sourceTypeLabel(source.type)}
+                      </span>
+                      {source.previousText && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                          Modificatoria cargada
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900 dark:text-white text-base">{source.title}</p>
+                      <div className={`mt-3 grid gap-2 text-xs ${["LAW", "CODE", "CONSTITUTION"].includes(source.type) ? "sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                          <p className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Numero / caratula</p>
+                          <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">{source.officialNumber || "Sin dato"}</p>
+                        </div>
+                        {!["LAW", "CODE", "CONSTITUTION"].includes(source.type) && (
+                          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                            <p className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Organismo / tribunal</p>
+                            <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">{source.officialName || "Sin dato"}</p>
+                          </div>
+                        )}
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                          <p className="font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estado del texto</p>
+                          <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">{source.previousText ? "Con modificatoria cargada" : "Texto vigente"}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <p className="font-semibold text-slate-900 dark:text-white">{source.title}</p>
-                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {source.sourceUrl && (
-                    <a
-                      href={source.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Abrir fuente
-                    </a>
-                  )}
-                  {source.previousText && source.content && (
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {source.sourceUrl && (
+                      <a
+                        href={source.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Abrir fuente
+                      </a>
+                    )}
+                    {source.previousText && source.content && (
                     <LegalSourceComparatorDialog
                       title={source.title}
                       country={source.country}
                       previousText={source.previousText}
-                      currentText={source.content}
+                      currentText={source.officialText ?? source.content ?? ""}
                     />
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDetach(source.id)}
-                    disabled={pendingId === source.id}
-                    className="gap-2"
-                  >
-                    <Unlink className="h-4 w-4" />
-                    Quitar
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleDetach(source.id)}
+                      disabled={pendingId === source.id}
+                      className="gap-2"
+                    >
+                      <Unlink className="h-4 w-4" />
+                      Quitar
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -202,18 +227,30 @@ export function CaseLegalSourcesPanel({
             {suggestedSources.map((source) => (
               <div
                 key={source.id}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col gap-3"
+                className="rounded-2xl border border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/40 p-4 flex flex-col gap-4"
               >
-                <div className="space-y-1">
+                <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                      {sourceTypeLabel(source.type)}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {source.country}
                     </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {source.area}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      {sourceTypeLabel(source.type)}
+                    </span>
                   </div>
-                  <p className="font-semibold text-slate-900 dark:text-white">{source.title}</p>
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">{source.title}</p>
+                    <div className="mt-3 grid gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <p><span className="font-semibold text-slate-700 dark:text-slate-300">Numero / caratula:</span> {source.officialNumber || "Sin dato"}</p>
+                      {!["LAW", "CODE", "CONSTITUTION"].includes(source.type) && (
+                        <p><span className="font-semibold text-slate-700 dark:text-slate-300">Organismo / tribunal:</span> {source.officialName || "Sin dato"}</p>
+                      )}
+                      <p><span className="font-semibold text-slate-700 dark:text-slate-300">Estado del texto:</span> {source.previousText ? "Con modificatoria cargada" : "Texto vigente"}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

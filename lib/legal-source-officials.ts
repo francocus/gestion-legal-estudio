@@ -39,7 +39,7 @@ export function detectOfficialLegalSource(url: string | null | undefined, countr
         return {
           recognized: true,
           preferred: hostname.includes("pj.gov.py") || hostname.includes("csj.gov.py") || hostname.includes("bacn.gov.py"),
-          label: "Base oficial Paraguay",
+          label: "Base de Legislacion Paraguaya / CSJ - IIJ",
         };
       }
     }

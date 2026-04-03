@@ -162,7 +162,7 @@ export function CreateEntryDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label className="dark:text-gray-300">Fecha</Label>
+              <Label className="dark:text-gray-300">Fecha <span className="text-red-500">*</span></Label>
               <Input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} required className="dark:bg-slate-900 dark:border-slate-800" />
             </div>
           </div>
