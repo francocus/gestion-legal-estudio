@@ -127,7 +127,7 @@ void (async () => {
       {
         async createMovement(data) {
           movements.push({ id: "movement-flow-1", ...data });
-          return null;
+          return { id: "movement-flow-1" };
         },
         revalidatePath(path) {
           revalidated.push(path);

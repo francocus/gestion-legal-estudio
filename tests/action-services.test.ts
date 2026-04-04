@@ -430,6 +430,7 @@ void (async () => {
       email: "socio@test.com",
       password: "hashed-clave",
       role: "ADMIN",
+      mustChangePassword: true,
     });
     assert.deepEqual(result, { success: "Usuario creado correctamente." });
     assert.deepEqual(calls, ["/team"]);
@@ -440,6 +441,12 @@ void (async () => {
     const calls: string[] = [];
 
     await deleteUserWithDeps(createFormData({ id: "user-8" }), {
+      async findUserById(id) {
+        return { id, email: "jr@test.com", role: "USER", status: "ACTIVE" };
+      },
+      async countActiveAdmins() {
+        return 2;
+      },
       async deleteUser(id) {
         deletedId = id;
         return null;
@@ -468,7 +475,7 @@ void (async () => {
       {
         async createMovement(data) {
           created = data;
-          return null;
+          return { id: "movement-1" };
         },
         revalidatePath(path) {
           calls.push(path);
