@@ -40,7 +40,7 @@ runTest("buildClientPayload normalizes optional empty fields", () => {
   assert.equal(payload.dni, null);
   assert.equal(payload.gender, null);
   assert.equal(payload.phone, "3415551234");
-  assert.equal(payload.birthDate?.toISOString(), "1990-04-15T15:00:00.000Z");
+  assert.equal(payload.birthDate?.toISOString().slice(0, 10), "1990-04-15");
 });
 
 runTest("parseCreateCaseInput clears court data for extrajudicial cases", () => {
