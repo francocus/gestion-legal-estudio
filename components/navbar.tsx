@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/actions/auth";
+import { logout, switchUser } from "@/lib/actions/auth";
 import Link from "next/link";
 import { GlobalSearch } from "@/components/global-search";
 import {
@@ -95,6 +95,13 @@ export function Navbar({ user }: NavbarProps) {
               </Button>
             </Link>
 
+            <Link href="/clientes">
+              <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/clientes" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                <Users className="h-4 w-4" />
+                <span className="hidden lg:inline">Clientes</span>
+              </Button>
+            </Link>
+
             <Link href="/contabilidad">
               <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/contabilidad" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
                 <Wallet className="h-4 w-4" />
@@ -158,7 +165,7 @@ export function Navbar({ user }: NavbarProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <form action={logout} className="w-full">
+                  <form action={switchUser} className="w-full">
                     <button type="submit" className="flex w-full items-center gap-2">
                       <RefreshCcw className="h-4 w-4 text-blue-500" />
                       Cambiar usuario

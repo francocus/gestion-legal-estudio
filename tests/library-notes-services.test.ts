@@ -9,6 +9,24 @@ import {
   verifyOfficialLegalSourceUpdateWithDeps,
 } from "@/lib/actions/services";
 
+interface UpdatedOfficialLegalSource {
+  title?: string;
+  previousText?: string | null;
+  content?: string;
+  officialText?: string | null;
+  officialNumber?: string | null;
+  officialName?: string | null;
+  isOutdated?: boolean;
+}
+
+interface UpdatedManualLegalSource {
+  title?: string;
+  content?: string;
+  type?: string;
+  area?: string;
+  publicationDate?: Date | null;
+}
+
 function createFormData(values: Record<string, string>) {
   const formData = new FormData();
 
@@ -144,7 +162,7 @@ void (async () => {
   });
 
   await runTest("verifyOfficialLegalSourceUpdateWithDeps syncs content and stores previous text when official source changed", async () => {
-    let updated: Record<string, unknown> | null = null;
+    let updated: UpdatedOfficialLegalSource | null = null;
     const calls: string[] = [];
 
     const result = await verifyOfficialLegalSourceUpdateWithDeps("source-3", {
@@ -188,18 +206,20 @@ void (async () => {
       success: true,
       message: "Se detecto una actualizacion oficial y la ley fue sincronizada.",
     });
-    assert.equal(updated?.title, "Ley 22278 - Minoridad regimen penal");
-    assert.equal(updated?.previousText, "Texto vigente viejo");
-    assert.equal(updated?.content, "Sintesis actualizada de la ley.");
-    assert.equal(updated?.officialText?.toString().includes("Resumen oficial:"), true);
-    assert.equal(updated?.officialNumber, "22278");
-    assert.equal(updated?.officialName, "Minoridad regimen penal");
-    assert.equal(updated?.isOutdated, true);
+    if (!updated) throw new Error("La fuente oficial no se actualizo en el test.");
+    const updatedOfficial = updated as UpdatedOfficialLegalSource;
+    assert.equal(updatedOfficial.title, "Ley 22278 - Minoridad regimen penal");
+    assert.equal(updatedOfficial.previousText, "Texto vigente viejo");
+    assert.equal(updatedOfficial.content, "Sintesis actualizada de la ley.");
+    assert.equal(updatedOfficial.officialText?.toString().includes("Resumen oficial:"), true);
+    assert.equal(updatedOfficial.officialNumber, "22278");
+    assert.equal(updatedOfficial.officialName, "Minoridad regimen penal");
+    assert.equal(updatedOfficial.isOutdated, true);
     assert.deepEqual(calls, ["/biblioteca"]);
   });
 
   await runTest("verifyOfficialLegalSourceUpdateWithDeps keeps current text when no official change was detected", async () => {
-    let updated: Record<string, unknown> | null = null;
+    let updated: UpdatedOfficialLegalSource | null = null;
 
     const result = await verifyOfficialLegalSourceUpdateWithDeps("source-4", {
       async findLegalSource() {
@@ -240,13 +260,15 @@ void (async () => {
       success: true,
       message: "No se detectaron cambios en la fuente oficial.",
     });
-    assert.equal(updated?.content, "Sintesis estable de la norma.");
-    assert.equal(updated?.previousText, null);
-    assert.equal(updated?.isOutdated, false);
+    if (!updated) throw new Error("La fuente oficial no se actualizo en el test.");
+    const updatedOfficial = updated as UpdatedOfficialLegalSource;
+    assert.equal(updatedOfficial.content, "Sintesis estable de la norma.");
+    assert.equal(updatedOfficial.previousText, null);
+    assert.equal(updatedOfficial.isOutdated, false);
   });
 
   await runTest("validateManualLegalSourceWithDeps completes manual card when summary succeeds", async () => {
-    let updated: Record<string, unknown> | null = null;
+    let updated: UpdatedManualLegalSource | null = null;
 
     const result = await validateManualLegalSourceWithDeps("source-manual-1", {
       async findLegalSource() {
@@ -286,11 +308,13 @@ void (async () => {
       success: true,
       message: "La IA valido la fuente y completo la ficha manual.",
     });
-    assert.equal(updated?.title, "Ley 27801 - Regimen Penal Juvenil");
-    assert.equal(updated?.content, "Establece el regimen penal aplicable a personas adolescentes imputadas por hechos tipificados como delito.");
-    assert.equal(updated?.type, "LAW");
-    assert.equal(updated?.area, "PENAL");
-    assert.equal((updated?.publicationDate as Date)?.toISOString?.().startsWith("2026-03-09"), true);
+    if (!updated) throw new Error("La fuente manual no se actualizo en el test.");
+    const updatedManual = updated as UpdatedManualLegalSource;
+    assert.equal(updatedManual.title, "Ley 27801 - Regimen Penal Juvenil");
+    assert.equal(updatedManual.content, "Establece el regimen penal aplicable a personas adolescentes imputadas por hechos tipificados como delito.");
+    assert.equal(updatedManual.type, "LAW");
+    assert.equal(updatedManual.area, "PENAL");
+    assert.equal(updatedManual.publicationDate?.toISOString?.().startsWith("2026-03-09"), true);
   });
 
   await runTest("validateManualLegalSourceWithDeps rejects manual validation when summary is not useful", async () => {

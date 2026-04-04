@@ -29,6 +29,10 @@ export default async function MainLayout({
     redirect("/login");
   }
 
+  if (user.mustChangePassword) {
+    redirect("/cambiar-clave");
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* 5. Le pasamos el usuario a la Navbar para que filtre botones (ej: Panel Admin) */}

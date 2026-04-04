@@ -45,11 +45,21 @@ model Case {
   client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   events          Event[]
   movements       Movement[]
+  documents       CaseDocument[]
   transactions    Transaction[]
   notes           Note[]
   entries         AccountEntry[]
   legalSources    CaseLegalSource[]
   createdAt       DateTime         @default(now())
+}
+
+model CaseDocument {
+  id         String   @id @default(cuid())
+  fileName   String
+  filePath   String
+  uploadedAt DateTime @default(now())
+  caseId     String
+  case       Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
 }
 
 model Event {
@@ -70,6 +80,16 @@ model Movement {
   date        DateTime @default(now())
   caseId      String
   case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  documents   MovementDocument[]
+}
+
+model MovementDocument {
+  id         String   @id @default(cuid())
+  fileName   String
+  filePath   String
+  uploadedAt DateTime @default(now())
+  movementId String
+  movement   Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
 }
 
 enum CaseStatus {
@@ -99,12 +119,26 @@ model Transaction {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("ADMIN")
-  createdAt DateTime @default(now())
+  id                String          @id @default(cuid())
+  email             String          @unique
+  password          String
+  name              String?
+  role              String          @default("ADMIN")
+  status            String          @default("ACTIVE")
+  mustChangePassword Boolean        @default(false)
+  lastLoginAt       DateTime?
+  createdAt         DateTime        @default(now())
+  auditLogs         UserAuditLog[]
+}
+
+model UserAuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  actorEmail String?
+  action     String
+  details    String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Note {

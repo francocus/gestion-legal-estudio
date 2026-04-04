@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutGrid, 
@@ -24,6 +24,7 @@ const areas = [
 
 export function AreaFilter() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const currentArea = searchParams.get("area");
   const query = searchParams.get("q");
 
@@ -31,7 +32,8 @@ export function AreaFilter() {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (areaId) params.set("area", areaId);
-    return `/?${params.toString()}`;
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
   };
 
   return (

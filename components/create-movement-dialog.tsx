@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createMovement } from "@/lib/actions/movements";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Paperclip } from "lucide-react";
 
 interface Props {
   caseId: string;
@@ -71,6 +71,15 @@ export function CreateMovementDialog({ caseId, clientId }: Props) {
                 placeholder="Copiar y pegar el texto del juzgado o notas personales..."
                 rows={8}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="documents" className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4 text-blue-500" />
+                Adjuntar PDFs
+              </Label>
+              <Input id="documents" name="documents" type="file" accept="application/pdf" multiple />
+              <p className="text-xs text-slate-500">Podes agregar uno o varios archivos PDF para ir armando el expediente digital.</p>
             </div>
 
             {error && (

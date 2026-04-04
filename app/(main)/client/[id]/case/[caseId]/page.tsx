@@ -10,8 +10,11 @@ import { CaseAiTools } from "@/components/case-ai-tools";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { WhatsAppActions } from "@/components/whatsapp-actions";
+import { deleteCaseDocument, uploadCaseDocuments } from "@/lib/actions/cases";
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 import {
   Gavel,
   DollarSign,
@@ -27,6 +30,13 @@ import {
   Zap,
   ExternalLink,
   NotebookPen,
+  BriefcaseBusiness,
+  FileClock,
+  Scale,
+  Wallet,
+  Paperclip,
+  Upload,
+  FileText,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +48,38 @@ interface PageProps {
   }>;
 }
 
+type CasePagePayload = Prisma.CaseGetPayload<{
+  include: {
+    client: true;
+    events: {
+      where: { isDone: false };
+      orderBy: { date: "asc" };
+    };
+    movements: {
+      orderBy: { date: "desc" };
+      include: {
+        documents: {
+          orderBy: { uploadedAt: "desc" };
+        };
+      };
+    };
+    documents: {
+      orderBy: { uploadedAt: "desc" };
+    };
+    notes: {
+      orderBy: { createdAt: "desc" };
+    };
+    legalSources: {
+      include: { legalSource: true };
+      orderBy: { createdAt: "desc" };
+    };
+  };
+}>;
+
 export default async function CasePage({ params }: PageProps) {
   const { id, caseId } = await params;
 
-  const legalCase = await db.case.findUnique({
+  const legalCase: CasePagePayload | null = await db.case.findUnique({
     where: { id: caseId },
     include: {
       client: true,
@@ -51,6 +89,14 @@ export default async function CasePage({ params }: PageProps) {
       },
       movements: {
         orderBy: { date: "desc" },
+        include: {
+          documents: {
+            orderBy: { uploadedAt: "desc" },
+          },
+        },
+      },
+      documents: {
+        orderBy: { uploadedAt: "desc" },
       },
       notes: { orderBy: { createdAt: "desc" } },
       legalSources: {
@@ -71,7 +117,7 @@ export default async function CasePage({ params }: PageProps) {
     orderBy: { date: "desc" },
   });
 
-  const linkedSourceIds = legalCase.legalSources.map((item) => item.legalSourceId);
+  const linkedSourceIds = legalCase.legalSources.map((item: CasePagePayload["legalSources"][number]) => item.legalSourceId);
   const suggestedLegalSources = await db.legalSource.findMany({
     where: {
       area: legalCase.area,
@@ -86,6 +132,10 @@ export default async function CasePage({ params }: PageProps) {
   const totalIncome = movimientosDelCaso.reduce((sum, item) => sum + (item.haber || 0), 0);
   const totalExpense = movimientosDelCaso.reduce((sum, item) => sum + (item.debe || 0), 0);
   const balance = totalIncome - totalExpense;
+  const nextEvent = legalCase.events[0] ?? null;
+  const latestMovement = legalCase.movements[0] ?? null;
+  const lastActivityDate = latestMovement?.date ?? nextEvent?.date ?? legalCase.createdAt;
+  const pendingFee = Math.max((legalCase.totalFee || 0) - totalIncome, 0);
 
   return (
     <div className="w-full p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -157,7 +207,120 @@ export default async function CasePage({ params }: PageProps) {
               {legalCase.area}
             </span>
           )}
+          <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-1 rounded border dark:border-slate-700 uppercase">
+            {legalCase.isExtrajudicial ? "Extrajudicial" : "Judicial"}
+          </span>
         </div>
+
+        <div className="grid gap-3 mt-6 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Cliente</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+              {legalCase.client.lastName}, {legalCase.client.firstName}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              {legalCase.isExtrajudicial ? "Gestion" : "Juzgado"}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+              {legalCase.juzgado || "Sin dato"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Numero</p>
+            <p className="mt-2 text-sm font-semibold font-mono text-slate-900 dark:text-white">
+              {legalCase.code || "Sin numero"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Proximo hito</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+              {nextEvent ? nextEvent.title : "Sin vencimientos pendientes"}
+            </p>
+            {nextEvent && (
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {nextEvent.date.toLocaleDateString("es-AR")} · {nextEvent.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} hs
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Actividad reciente</p>
+                <p className="mt-2 text-lg font-bold text-slate-900 dark:text-white">
+                  {latestMovement ? latestMovement.title : "Sin movimientos recientes"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-blue-100 p-3 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <BriefcaseBusiness className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Ultima referencia: {lastActivityDate.toLocaleDateString("es-AR")}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Agenda activa</p>
+                <p className="mt-2 text-lg font-bold text-slate-900 dark:text-white">{legalCase.events.length} pendientes</p>
+              </div>
+              <div className="rounded-xl bg-amber-100 p-3 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                <FileClock className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              {nextEvent ? `Siguiente: ${nextEvent.title}` : "No hay vencimientos inmediatos."}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Biblioteca y notas</p>
+                <p className="mt-2 text-lg font-bold text-slate-900 dark:text-white">
+                  {legalCase.legalSources.length} fuentes · {legalCase.notes.length} notas
+                </p>
+              </div>
+              <div className="rounded-xl bg-violet-100 p-3 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                <Scale className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              {legalCase.legalSources.length > 0 ? "El caso ya tiene sustento juridico vinculado." : "Conviene vincular fuentes juridicas a este caso."}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Honorarios del caso</p>
+                <p className="mt-2 text-lg font-bold text-slate-900 dark:text-white">
+                  ${(legalCase.totalFee || 0).toLocaleString("es-AR")}
+                </p>
+              </div>
+              <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <Wallet className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Cobrado: ${totalIncome.toLocaleString("es-AR")} · Pendiente: ${pendingFee.toLocaleString("es-AR")}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <CaseAiTools
@@ -166,8 +329,8 @@ export default async function CasePage({ params }: PageProps) {
         caratula={legalCase.caratula}
         area={legalCase.area}
         description={legalCase.description || ""}
-        notes={legalCase.notes.map((note) => note.content)}
-        legalSources={legalCase.legalSources.map((item) => ({
+        notes={legalCase.notes.map((note: CasePagePayload["notes"][number]) => note.content)}
+        legalSources={legalCase.legalSources.map((item: CasePagePayload["legalSources"][number]) => ({
           title: item.legalSource.title,
           type: item.legalSource.type,
           area: item.legalSource.area,
@@ -190,7 +353,7 @@ export default async function CasePage({ params }: PageProps) {
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {legalCase.events.map((evt) => (
+            {legalCase.events.map((evt: CasePagePayload["events"][number]) => (
               <Card key={evt.id} className="border-l-4 border-l-red-500 shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 relative group">
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <DeleteButton id={evt.id} type="EVENT" clientId={id} caseId={caseId} />
@@ -303,6 +466,91 @@ export default async function CasePage({ params }: PageProps) {
         suggestedSources={suggestedLegalSources}
       />
 
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h3 className="text-xl font-bold flex items-center gap-3 text-slate-900 dark:text-white">
+              <FileText className="h-6 w-6 text-blue-500" /> Documentos del expediente
+            </h3>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Adjunta PDFs generales del caso sin necesidad de crear un movimiento nuevo.
+            </p>
+          </div>
+
+          <form action={uploadCaseDocuments} className="w-full max-w-xl rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <input type="hidden" name="caseId" value={caseId} />
+            <input type="hidden" name="clientId" value={id} />
+            <label className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              Adjuntar PDFs <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="documents"
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="mt-3 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            />
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Puedes sumar uno o varios PDFs para ir armando el expediente digital del caso.
+            </p>
+            <Button type="submit" className="mt-4 w-full sm:w-auto bg-blue-600 hover:bg-blue-700">
+              <Upload className="h-4 w-4" /> Subir al expediente
+            </Button>
+          </form>
+        </div>
+
+        {legalCase.documents.length === 0 ? (
+          <div className="mt-6 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center text-sm text-slate-400 dark:border-slate-800 dark:bg-slate-950/30">
+            Todavia no hay PDFs generales cargados en este expediente.
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {legalCase.documents.map((document: CasePagePayload["documents"][number]) => (
+              <div
+                key={document.id}
+                className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"
+              >
+                <a
+                  href={document.filePath}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      <Paperclip className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-300">
+                        {document.fileName}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        Cargado el {document.uploadedAt.toLocaleDateString("es-AR")}
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                <form action={deleteCaseDocument}>
+                  <input type="hidden" name="id" value={document.id} />
+                  <input type="hidden" name="caseId" value={caseId} />
+                  <input type="hidden" name="clientId" value={id} />
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                    title="Eliminar documento"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </Button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-6 pt-4">
         <div className="flex justify-between items-center border-b dark:border-slate-800 pb-4">
           <h3 className="text-2xl font-bold flex items-center gap-3 text-slate-900 dark:text-white">
@@ -318,7 +566,7 @@ export default async function CasePage({ params }: PageProps) {
               <p className="font-medium italic">El historial esta vacio. Cargue el primer movimiento judicial.</p>
             </div>
           ) : (
-            legalCase.movements.map((mov) => (
+            legalCase.movements.map((mov: CasePagePayload["movements"][number]) => (
               <div key={mov.id} className="relative group">
                 <div className="absolute -left-[41px] top-6 w-5 h-5 rounded-full bg-blue-500 border-4 border-white dark:border-slate-950 shadow-md transition-transform group-hover:scale-125 z-10" />
 
@@ -335,6 +583,28 @@ export default async function CasePage({ params }: PageProps) {
                       <p className="text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap leading-relaxed border-l-2 border-slate-100 dark:border-slate-800 pl-4">
                         {mov.description}
                       </p>
+                    )}
+                    {mov.documents.length > 0 && (
+                      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                          <Paperclip className="h-3.5 w-3.5 text-blue-500" />
+                          Documentos adjuntos
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {mov.documents.map((document: CasePagePayload["movements"][number]["documents"][number]) => (
+                            <a
+                              key={document.id}
+                              href={document.filePath}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <Paperclip className="h-4 w-4" />
+                              {document.fileName}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
