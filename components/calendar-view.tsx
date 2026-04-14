@@ -16,6 +16,7 @@ interface Event {
   date: Date;
   type: EventType;
   isDone: boolean;
+  client?: { firstName: string; lastName: string } | null;
   case?: { caratula: string; id: string; clientId: string } | null;
 }
 
@@ -26,12 +27,13 @@ export function CalendarView({ events }: { events: Event[] }) {
     let bgColor = "#3b82f6";
     if (evt.type === "HEARING") bgColor = "#ef4444";
     if (evt.type === "DEADLINE") bgColor = "#f59e0b";
+    if (evt.type === "APPOINTMENT") bgColor = "#d946ef";
 
     if (evt.isDone) bgColor = "#94a3b8";
 
     return {
       id: evt.id,
-      title: `${evt.title} ${evt.case ? `(${evt.case.caratula})` : ""}`,
+      title: `${evt.title} ${evt.case ? `(${evt.case.caratula})` : evt.client ? `(${evt.client.lastName}, ${evt.client.firstName})` : ""}`,
       start: evt.date,
       backgroundColor: bgColor,
       borderColor: bgColor,

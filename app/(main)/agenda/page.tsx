@@ -16,6 +16,14 @@ function getDaysDiff(date: Date) {
 export default async function AgendaPage() {
   const events = await db.event.findMany({
     include: {
+      client: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+        },
+      },
       case: {
         select: {
           caratula: true,
@@ -25,6 +33,7 @@ export default async function AgendaPage() {
             select: {
               firstName: true,
               lastName: true,
+              phone: true,
             },
           },
         },
@@ -42,6 +51,16 @@ export default async function AgendaPage() {
     },
   });
 
+  const activeClients = await db.client.findMany({
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+    },
+  });
+
   const pendingEvents = events.filter((event) => !event.isDone);
   const todayEvents = pendingEvents.filter((event) => getDaysDiff(event.date) === 0).length;
   const upcomingThreeDays = pendingEvents.filter((event) => {
@@ -50,6 +69,7 @@ export default async function AgendaPage() {
   }).length;
   const overdueEvents = pendingEvents.filter((event) => getDaysDiff(event.date) < 0).length;
   const linkedToCases = pendingEvents.filter((event) => Boolean(event.caseId)).length;
+  const appointments = pendingEvents.filter((event) => event.type === "APPOINTMENT").length;
 
   return (
     <div className="w-full p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -67,7 +87,7 @@ export default async function AgendaPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <CalendarDays className="h-4 w-4 text-blue-500" /> Hoy
@@ -92,6 +112,12 @@ export default async function AgendaPage() {
           </div>
           <p className="mt-3 text-3xl font-extrabold text-slate-900 dark:text-white">{linkedToCases}</p>
         </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <Users className="h-4 w-4 text-fuchsia-500" /> Turnos
+          </div>
+          <p className="mt-3 text-3xl font-extrabold text-slate-900 dark:text-white">{appointments}</p>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -99,6 +125,7 @@ export default async function AgendaPage() {
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-red-500" /> Audiencias</span>
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-amber-500" /> Plazos / vencimientos</span>
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-blue-500" /> Reuniones / gestion</span>
+          <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-fuchsia-500" /> Turnos</span>
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-purple-500" /> Personal</span>
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-emerald-500" /> Medico</span>
           <span className="flex items-center gap-2"><div className="h-3 w-3 rounded-full bg-pink-500" /> Social</span>
@@ -106,7 +133,7 @@ export default async function AgendaPage() {
         </div>
       </div>
 
-      <AgendaPanel initialEvents={events} activeCases={activeCases} />
+      <AgendaPanel initialEvents={events} activeCases={activeCases} activeClients={activeClients} />
       <CalendarView events={events} />
     </div>
   );

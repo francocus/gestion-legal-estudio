@@ -1,4 +1,4 @@
-import { CaseStatus, EventType } from "@prisma/client";
+import { AppointmentMode, AppointmentStatus, CaseStatus, EventType } from "@prisma/client";
 import { getOptionalNumber, getOptionalString, getRequiredString, getStringWithDefault } from "@/lib/actions/form-data";
 
 function getNullableValue(formData: FormData, key: string) {
@@ -97,13 +97,22 @@ export function parseCreateTransactionInput(formData: FormData) {
 export function parseCreateAgendaEventInput(formData: FormData) {
   const title = getRequiredString(formData, "title");
   const dateStr = getRequiredString(formData, "date");
+  const type = getRequiredString(formData, "type") as EventType;
+  const durationRaw = getOptionalString(formData, "durationMinutes");
+  const depositRaw = getOptionalString(formData, "depositAmount");
 
   return {
     title,
     dateStr,
     date: new Date(dateStr),
-    type: getRequiredString(formData, "type") as EventType,
+    type,
     description: getOptionalString(formData, "description") ?? "",
     caseId: getOptionalString(formData, "caseId"),
+    clientId: getOptionalString(formData, "clientId"),
+    appointmentStatus: (getOptionalString(formData, "appointmentStatus") as AppointmentStatus | null) ?? (type === "APPOINTMENT" ? "PENDING" : null),
+    appointmentMode: getOptionalString(formData, "appointmentMode") as AppointmentMode | null,
+    durationMinutes: durationRaw ? Number(durationRaw) : null,
+    depositAmount: depositRaw ? Number(depositRaw) : null,
+    depositPaid: getOptionalString(formData, "depositPaid") === "true",
   };
 }

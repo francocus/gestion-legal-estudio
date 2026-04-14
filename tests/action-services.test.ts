@@ -134,6 +134,12 @@ void (async () => {
       type: "HEARING",
       description: "Sala 1",
       caseId: null,
+      clientId: null,
+      appointmentStatus: null,
+      appointmentMode: null,
+      durationMinutes: null,
+      depositAmount: null,
+      depositPaid: false,
     });
     assert.deepEqual(calls, ["/agenda"]);
   });
