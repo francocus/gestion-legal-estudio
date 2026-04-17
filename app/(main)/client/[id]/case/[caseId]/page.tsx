@@ -2,6 +2,7 @@ import { PdfButton } from "@/components/pdf-button";
 import { EditCaseDialog } from "@/components/edit-case-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import { CreateEventDialog } from "@/components/create-event-dialog";
+import { CreateAppointmentDialog } from "@/components/create-appointment-dialog";
 import { CreateMovementDialog } from "@/components/create-movement-dialog";
 import { CaseNotesPanel } from "@/components/case-notes-panel";
 import { CaseLegalSourcesPanel } from "@/components/case-legal-sources-panel";
@@ -37,6 +38,9 @@ import {
   Paperclip,
   Upload,
   FileText,
+  CalendarClock,
+  MessageSquareShare,
+  Banknote,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -132,7 +136,9 @@ export default async function CasePage({ params }: PageProps) {
   const totalIncome = movimientosDelCaso.reduce((sum, item) => sum + (item.haber || 0), 0);
   const totalExpense = movimientosDelCaso.reduce((sum, item) => sum + (item.debe || 0), 0);
   const balance = totalIncome - totalExpense;
-  const nextEvent = legalCase.events[0] ?? null;
+  const pendingDeadlines = legalCase.events.filter((evt) => evt.type !== "APPOINTMENT");
+  const appointments = legalCase.events.filter((evt) => evt.type === "APPOINTMENT");
+  const nextEvent = pendingDeadlines[0] ?? appointments[0] ?? null;
   const latestMovement = legalCase.movements[0] ?? null;
   const lastActivityDate = latestMovement?.date ?? nextEvent?.date ?? legalCase.createdAt;
   const pendingFee = Math.max((legalCase.totalFee || 0) - totalIncome, 0);
@@ -240,7 +246,7 @@ export default async function CasePage({ params }: PageProps) {
             </p>
             {nextEvent && (
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {nextEvent.date.toLocaleDateString("es-AR")} · {nextEvent.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} hs
+                {nextEvent.date.toLocaleDateString("es-AR")} - {nextEvent.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} hs
               </p>
             )}
           </div>
@@ -279,7 +285,7 @@ export default async function CasePage({ params }: PageProps) {
               </div>
             </div>
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              {nextEvent ? `Siguiente: ${nextEvent.title}` : "No hay vencimientos inmediatos."}
+              {nextEvent ? `Siguiente: ${nextEvent.title}` : "No hay movimientos de agenda inmediatos."}
             </p>
           </CardContent>
         </Card>
@@ -290,7 +296,7 @@ export default async function CasePage({ params }: PageProps) {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Biblioteca y notas</p>
                 <p className="mt-2 text-lg font-bold text-slate-900 dark:text-white">
-                  {legalCase.legalSources.length} fuentes · {legalCase.notes.length} notas
+                  {legalCase.legalSources.length} fuentes - {legalCase.notes.length} notas
                 </p>
               </div>
               <div className="rounded-xl bg-violet-100 p-3 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
@@ -317,7 +323,7 @@ export default async function CasePage({ params }: PageProps) {
               </div>
             </div>
             <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              Cobrado: ${totalIncome.toLocaleString("es-AR")} · Pendiente: ${pendingFee.toLocaleString("es-AR")}
+              Cobrado: ${totalIncome.toLocaleString("es-AR")} - Pendiente: ${pendingFee.toLocaleString("es-AR")}
             </p>
           </CardContent>
         </Card>
@@ -339,6 +345,90 @@ export default async function CasePage({ params }: PageProps) {
         defaultCountry={legalCase.legalSources[0]?.legalSource.country || "Argentina"}
       />
 
+      <div className="bg-fuchsia-50/70 dark:bg-fuchsia-950/20 border border-fuchsia-100 dark:border-fuchsia-900/30 rounded-xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-fuchsia-800 dark:text-fuchsia-300 font-bold flex items-center gap-2 text-lg">
+              <CalendarClock className="h-5 w-5" /> Turnos del expediente
+            </h3>
+            <p className="mt-1 text-sm text-fuchsia-700/80 dark:text-fuchsia-200/70">
+              Seguimiento de citas, confirmaciones y señas vinculadas a este caso.
+            </p>
+          </div>
+          <CreateAppointmentDialog clientId={id} caseId={caseId} triggerLabel="Nuevo turno" />
+        </div>
+
+        {appointments.length === 0 ? (
+          <p className="text-sm text-fuchsia-400 italic bg-white/50 dark:bg-black/20 p-4 rounded-lg border border-dashed border-fuchsia-200 dark:border-fuchsia-900/30 text-center flex items-center justify-center gap-2">
+            <CalendarClock className="h-4 w-4" /> No hay turnos pendientes para este expediente.
+          </p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {appointments.map((evt: CasePagePayload["events"][number]) => (
+              <Card key={evt.id} className="border-l-4 border-l-fuchsia-500 shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 relative group">
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <DeleteButton id={evt.id} type="EVENT" clientId={id} caseId={caseId} />
+                </div>
+                <CardContent className="p-4">
+                  <span className="text-[10px] font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <CalendarClock className="h-3 w-3" /> Turno
+                  </span>
+                  <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-2">{evt.title}</h4>
+                  <div className="space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3" /> {evt.date.toLocaleDateString()} - {evt.date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} hs</p>
+                    {evt.appointmentMode && (
+                      <p className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        {evt.appointmentMode === "IN_PERSON" ? "Presencial" : evt.appointmentMode === "PHONE" ? "Llamada" : "Videollamada"}
+                        {evt.durationMinutes ? ` - ${evt.durationMinutes} min` : ""}
+                      </p>
+                    )}
+                    {evt.appointmentStatus && (
+                      <p className="font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                        {evt.appointmentStatus === "PENDING"
+                          ? "Pendiente"
+                          : evt.appointmentStatus === "CONFIRMED"
+                            ? "Confirmado"
+                            : evt.appointmentStatus === "COMPLETED"
+                              ? "Realizado"
+                              : evt.appointmentStatus === "CANCELLED"
+                                ? "Cancelado"
+                                : "Ausente"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {evt.depositAmount ? (
+                      <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                        evt.depositPaid
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                      }`}>
+                        <Banknote className="h-3.5 w-3.5" />
+                        Seña {evt.depositPaid ? "pagada" : "pendiente"} - ${evt.depositAmount.toLocaleString("es-AR")}
+                      </span>
+                    ) : null}
+
+                    {legalCase.client.phone && (
+                      <a
+                        href={`https://wa.me/${legalCase.client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${legalCase.client.firstName}, te recordamos tu turno \"${evt.title}\" para el ${evt.date.toLocaleString("es-AR", { dateStyle: "full", timeStyle: "short" })}.`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"
+                      >
+                        <MessageSquareShare className="h-3.5 w-3.5" />
+                        Recordar por WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-red-800 dark:text-red-300 font-bold flex items-center gap-2 text-lg">
@@ -347,13 +437,13 @@ export default async function CasePage({ params }: PageProps) {
           <CreateEventDialog caseId={caseId} clientId={id} />
         </div>
 
-        {legalCase.events.length === 0 ? (
+        {pendingDeadlines.length === 0 ? (
           <p className="text-sm text-red-400 italic bg-white/50 dark:bg-black/20 p-4 rounded-lg border border-dashed border-red-200 dark:border-red-900/30 text-center flex items-center justify-center gap-2">
             <CalendarDays className="h-4 w-4" /> No hay vencimientos pendientes para este caso.
           </p>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {legalCase.events.map((evt: CasePagePayload["events"][number]) => (
+            {pendingDeadlines.map((evt: CasePagePayload["events"][number]) => (
               <Card key={evt.id} className="border-l-4 border-l-red-500 shadow-sm bg-white dark:bg-slate-900 dark:border-slate-800 relative group">
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <DeleteButton id={evt.id} type="EVENT" clientId={id} caseId={caseId} />
@@ -616,3 +706,4 @@ export default async function CasePage({ params }: PageProps) {
     </div>
   );
 }
+

@@ -29,6 +29,7 @@ model Client {
   createdAt   DateTime @default(now())
   cases       Case[]
   events      Event[]
+  obligations Obligation[]
 }
 
 model Case {
@@ -51,6 +52,7 @@ model Case {
   notes           Note[]
   entries         AccountEntry[]
   legalSources    CaseLegalSource[]
+  obligations     Obligation[]
   createdAt       DateTime         @default(now())
 }
 
@@ -77,8 +79,10 @@ model Event {
   durationMinutes    Int?
   depositAmount      Float?
   depositPaid        Boolean           @default(false)
+  obligation         Obligation?       @relation("ObligationEvent")
   case               Case?             @relation(fields: [caseId], references: [id], onDelete: Cascade)
   client             Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  accountEntries     AccountEntry[]
 }
 
 model Movement {
@@ -181,8 +185,34 @@ model AccountEntry {
   debe        Float    @default(0)
   haber       Float    @default(0)
   caseId      String?
+  appointmentId String? @unique
+  obligationRecord Obligation? @relation("ObligationEntry")
   case        Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  appointment Event?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
+}
+
+model Obligation {
+  id             String             @id @default(cuid())
+  clientId       String
+  caseId         String?
+  country        String             @default("Argentina")
+  organism       String
+  category       ObligationCategory
+  concept        String
+  period         String?
+  dueDate        DateTime
+  amount         Float?
+  status         ObligationStatus   @default(PENDING)
+  notes          String?
+  eventId        String?            @unique
+  paymentEntryId String?            @unique
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  client         Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  case           Case?              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  event          Event?             @relation("ObligationEvent", fields: [eventId], references: [id], onDelete: SetNull)
+  paymentEntry   AccountEntry?      @relation("ObligationEntry", fields: [paymentEntryId], references: [id], onDelete: SetNull)
 }
 
 model LegalSource {
@@ -224,4 +254,21 @@ enum LegalSourceType {
   CONSTITUTION
   JURISPRUDENCE
   OTHER
+}
+
+enum ObligationCategory {
+  TAX
+  FEE
+  CONTRIBUTION
+  SERVICE
+  RENT
+  FILING
+  OTHER
+}
+
+enum ObligationStatus {
+  PENDING
+  FILED
+  PAID
+  CANCELLED
 }

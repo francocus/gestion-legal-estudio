@@ -338,6 +338,7 @@ export function AgendaPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"ALL" | "URGENT" | "CASE" | "APPOINTMENT" | "PERSONAL" | "DONE">("ALL");
+  const [appointmentFilter, setAppointmentFilter] = useState<"ALL" | "PENDING" | "CONFIRMED" | "DEPOSIT_PENDING">("ALL");
   const [rangeFilter, setRangeFilter] = useState<"ALL" | "TODAY" | "WEEK" | "MONTH">("ALL");
   const [sortBy, setSortBy] = useState<"DATE_ASC" | "DATE_DESC" | "PRIORITY">("PRIORITY");
   const [searchTerm, setSearchTerm] = useState("");
@@ -400,7 +401,18 @@ export function AgendaPanel({
           return haystack.includes(normalizedSearch);
         });
 
-    return [...withSearch].sort((left, right) => {
+    const withAppointmentFilter =
+      appointmentFilter === "ALL"
+        ? withSearch
+        : withSearch.filter((event) => {
+            if (event.type !== "APPOINTMENT") return false;
+            if (appointmentFilter === "DEPOSIT_PENDING") {
+              return (event.depositAmount ?? 0) > 0 && !event.depositPaid;
+            }
+            return event.appointmentStatus === appointmentFilter;
+          });
+
+    return [...withAppointmentFilter].sort((left, right) => {
       const leftDate = new Date(left.date).getTime();
       const rightDate = new Date(right.date).getTime();
 
@@ -423,7 +435,7 @@ export function AgendaPanel({
 
       return leftDate - rightDate;
     });
-  }, [filter, normalizedSearch, pendingEvents, rangeFilter, sortBy]);
+  }, [appointmentFilter, filter, normalizedSearch, pendingEvents, rangeFilter, sortBy]);
 
   const filteredDoneEvents = useMemo(() => {
     const withRange = doneEvents.filter((event) => {
@@ -493,6 +505,8 @@ export function AgendaPanel({
   const deadlineCount = pendingEvents.filter((event) => event.type === "DEADLINE").length;
   const meetingCount = pendingEvents.filter((event) => event.type === "MEETING").length;
   const appointmentCount = pendingEvents.filter((event) => event.type === "APPOINTMENT").length;
+  const appointmentPendingCount = pendingEvents.filter((event) => event.type === "APPOINTMENT" && event.appointmentStatus === "PENDING").length;
+  const appointmentConfirmedCount = pendingEvents.filter((event) => event.type === "APPOINTMENT" && event.appointmentStatus === "CONFIRMED").length;
   const personalFlowCount = pendingEvents.filter((event) => ["PERSONAL", "MEDICAL", "SOCIAL"].includes(event.type)).length;
   const depositPendingCount = pendingEvents.filter((event) => event.type === "APPOINTMENT" && (event.depositAmount ?? 0) > 0 && !event.depositPaid).length;
 
@@ -774,6 +788,10 @@ export function AgendaPanel({
               <div className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">{appointmentCount}</div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Confirmados</div>
+              <div className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">{appointmentConfirmedCount}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Personales</div>
               <div className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">{personalFlowCount}</div>
             </div>
@@ -834,6 +852,36 @@ export function AgendaPanel({
               </button>
             ))}
           </div>
+          {filter === "APPOINTMENT" && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+              {[
+                { id: "ALL", label: "Todos", count: appointmentCount },
+                { id: "PENDING", label: "Pendientes", count: appointmentPendingCount },
+                { id: "CONFIRMED", label: "Confirmados", count: appointmentConfirmedCount },
+                { id: "DEPOSIT_PENDING", label: "Señas pendientes", count: depositPendingCount },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setAppointmentFilter(item.id as typeof appointmentFilter)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
+                    appointmentFilter === item.id
+                      ? "border-transparent bg-fuchsia-600 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                    appointmentFilter === item.id
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  }`}>
+                    {item.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
             <div>
               <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">

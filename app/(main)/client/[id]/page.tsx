@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { CreateCaseDialog } from "@/components/create-case-dialog";
+import { CreateAppointmentDialog } from "@/components/create-appointment-dialog";
 import { EditClientDialog } from "@/components/edit-client-dialog";
 import { DeleteButton } from "@/components/delete-button";
 import {
@@ -24,6 +25,10 @@ import {
   MessageCircle,
   FolderOpen,
   Landmark,
+  CalendarClock,
+  Clock3,
+  Banknote,
+  MessageSquareShare,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +45,22 @@ export default async function ClientPage({ params }: PageProps) {
   const client = await db.client.findUnique({
     where: { id },
     include: {
+      events: {
+        where: {
+          type: "APPOINTMENT",
+          isDone: false,
+        },
+        include: {
+          case: {
+            select: {
+              id: true,
+              caratula: true,
+            },
+          },
+        },
+        orderBy: { date: "asc" },
+        take: 6,
+      },
       cases: {
         orderBy: { createdAt: "desc" },
         include: {
@@ -62,6 +83,12 @@ export default async function ClientPage({ params }: PageProps) {
   const activeCases = client.cases.filter((c) => c.status === "ACTIVE").length;
   const judicialCases = client.cases.filter((c) => !c.isExtrajudicial).length;
   const extrajudicialCases = client.cases.filter((c) => c.isExtrajudicial).length;
+  const appointmentCaseOptions = client.cases.map((c) => ({ id: c.id, caratula: c.caratula }));
+  const appointmentsWithDeposit = client.events.filter((evt) => typeof evt.depositAmount === "number" && evt.depositAmount > 0);
+  const paidDeposits = appointmentsWithDeposit.filter((evt) => evt.depositPaid);
+  const pendingDeposits = appointmentsWithDeposit.filter((evt) => !evt.depositPaid);
+  const paidDepositAmount = paidDeposits.reduce((sum, evt) => sum + (evt.depositAmount || 0), 0);
+  const pendingDepositAmount = pendingDeposits.reduce((sum, evt) => sum + (evt.depositAmount || 0), 0);
 
   return (
     <div className="w-full p-6 space-y-6 max-w-[1600px] mx-auto">
@@ -89,10 +116,17 @@ export default async function ClientPage({ params }: PageProps) {
             </p>
           </div>
 
-          <CreateCaseDialog clientId={client.id} />
+          <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-[260px]">
+            <CreateCaseDialog clientId={client.id} />
+            <CreateAppointmentDialog
+              clientId={client.id}
+              caseOptions={appointmentCaseOptions}
+              triggerLabel="Nuevo turno"
+            />
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card className="border-gray-200 dark:border-slate-800 dark:bg-slate-900">
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
@@ -135,6 +169,25 @@ export default async function ClientPage({ params }: PageProps) {
                 </div>
               </div>
               <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">Gestiones y acuerdos fuera de juicio.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-gray-200 dark:border-slate-800 dark:bg-slate-900">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-slate-400">Señas</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+                    ${pendingDepositAmount.toLocaleString("es-AR")}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-fuchsia-100 p-3 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300">
+                  <Banknote className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
+                Pendientes: {pendingDeposits.length} · Cobradas: {paidDeposits.length}
+              </p>
             </CardContent>
           </Card>
 
@@ -252,6 +305,111 @@ export default async function ClientPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border border-fuchsia-100 bg-fuchsia-50/60 p-6 shadow-sm dark:border-fuchsia-900/30 dark:bg-fuchsia-950/20">
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <CalendarClock className="h-6 w-6 text-fuchsia-500" /> Proximos turnos
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Turnos, confirmaciones y señas del cliente en el corto plazo.
+            </p>
+          </div>
+          <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-fuchsia-700 dark:bg-slate-900/70 dark:text-fuchsia-300">
+            {client.events.length} activos
+          </span>
+        </div>
+
+        {appointmentsWithDeposit.length > 0 && (
+          <div className="mb-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-fuchsia-100 bg-white/80 p-4 dark:border-fuchsia-900/30 dark:bg-slate-900/60">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Señas pendientes</p>
+              <p className="mt-2 text-xl font-bold text-amber-600 dark:text-amber-400">${pendingDepositAmount.toLocaleString("es-AR")}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{pendingDeposits.length} turno(s) con anticipo pendiente</p>
+            </div>
+            <div className="rounded-xl border border-fuchsia-100 bg-white/80 p-4 dark:border-fuchsia-900/30 dark:bg-slate-900/60">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Señas cobradas</p>
+              <p className="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">${paidDepositAmount.toLocaleString("es-AR")}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{paidDeposits.length} turno(s) con anticipo registrado</p>
+            </div>
+            <div className="rounded-xl border border-fuchsia-100 bg-white/80 p-4 dark:border-fuchsia-900/30 dark:bg-slate-900/60">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Turnos con seña</p>
+              <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">{appointmentsWithDeposit.length}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Con reserva asociada en agenda</p>
+            </div>
+          </div>
+        )}
+
+        {client.events.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-fuchsia-200 bg-white/70 p-8 text-center text-sm text-fuchsia-700/70 dark:border-fuchsia-900/40 dark:bg-slate-950/30 dark:text-fuchsia-200/70">
+            No hay turnos pendientes para este cliente.
+          </div>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {client.events.map((evt) => (
+              <Card key={evt.id} className="border-fuchsia-100 bg-white/90 dark:border-fuchsia-900/30 dark:bg-slate-900">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-slate-900 dark:text-white">{evt.title}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock3 className="h-3.5 w-3.5 text-fuchsia-500" />
+                          {evt.date.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
+                        </span>
+                        {evt.appointmentMode && (
+                          <span className="rounded-full border border-fuchsia-200 px-2 py-0.5 font-semibold text-fuchsia-700 dark:border-fuchsia-900/30 dark:text-fuchsia-300">
+                            {evt.appointmentMode === "IN_PERSON" ? "Presencial" : evt.appointmentMode === "PHONE" ? "Llamada" : "Videollamada"}
+                          </span>
+                        )}
+                        {evt.appointmentStatus && (
+                          <span className="rounded-full border border-slate-200 px-2 py-0.5 font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                            {evt.appointmentStatus === "PENDING" ? "Pendiente" : evt.appointmentStatus === "CONFIRMED" ? "Confirmado" : evt.appointmentStatus}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {evt.depositAmount ? (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+                        evt.depositPaid
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                      }`}>
+                        <Banknote className="h-3.5 w-3.5" />
+                        ${evt.depositAmount.toLocaleString("es-AR")}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2 text-sm">
+                    {evt.case && (
+                      <Link
+                        href={`/client/${client.id}/case/${evt.case.id}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <MessageSquareShare className="h-3.5 w-3.5" />
+                        {evt.case.caratula}
+                      </Link>
+                    )}
+                    {client.phone && (
+                      <a
+                        href={`https://wa.me/${client.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola ${client.firstName}, te recordamos tu turno \"${evt.title}\" para el ${evt.date.toLocaleString("es-AR", { dateStyle: "full", timeStyle: "short" })}.`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Recordar por WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

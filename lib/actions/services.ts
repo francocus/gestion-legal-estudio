@@ -228,6 +228,7 @@ export async function createAgendaEventWithDeps(
   });
 
   deps.revalidatePath("/agenda");
+  deps.revalidatePath("/contabilidad");
   return ACTION_OK;
 }
 
@@ -266,6 +267,7 @@ export async function toggleAppointmentDepositWithDeps(
 
   await deps.updateEvent(id, { depositPaid });
   deps.revalidatePath("/agenda");
+  deps.revalidatePath("/contabilidad");
   return ACTION_OK;
 }
 

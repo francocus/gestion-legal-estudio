@@ -141,7 +141,7 @@ void (async () => {
       depositAmount: null,
       depositPaid: false,
     });
-    assert.deepEqual(calls, ["/agenda"]);
+    assert.deepEqual(calls, ["/agenda", "/contabilidad"]);
   });
 
   await runTest("createAgendaEventWithDeps rejects invalid payload", async () => {

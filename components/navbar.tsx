@@ -25,6 +25,7 @@ import {
   Home,
   UserCircle2,
   RefreshCcw,
+  ReceiptText,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -106,6 +107,13 @@ export function Navbar({ user }: NavbarProps) {
               <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/contabilidad" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
                 <Wallet className="h-4 w-4" />
                 <span className="hidden lg:inline">Contabilidad</span>
+              </Button>
+            </Link>
+
+            <Link href="/obligaciones">
+              <Button variant="ghost" size="sm" className={`text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 gap-2 ${pathname === "/obligaciones" ? "bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 font-bold" : ""}`}>
+                <ReceiptText className="h-4 w-4" />
+                <span className="hidden lg:inline">Obligaciones</span>
               </Button>
             </Link>
 
