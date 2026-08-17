@@ -1,5 +1,7 @@
 # Sistema de Gestión Jurídica Integral
 
+> **🚀 Demo en vivo:** [gestion-estudio-juridico.vercel.app](https://gestion-estudio-juridico.vercel.app/)
+
 Plataforma web integral para la administración de estudios jurídicos, con enfoque internacional (Argentina y Paraguay) y adaptable a distintas jurisdicciones y materias.
 
 Centraliza la gestión de clientes, el seguimiento de expedientes judiciales y extrajudiciales, la biblioteca jurídica con **verificación de fuentes oficiales asistida por IA**, la agenda, y el control financiero del estudio.
