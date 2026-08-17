@@ -6,6 +6,7 @@ import { SearchInput } from "@/components/search-input";
 import { AreaFilter } from "@/components/area-filter";
 import { DeleteButton } from "@/components/delete-button";
 import { Button } from "@/components/ui/button";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import {
   Users,
   Phone,
@@ -127,6 +128,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex-1 w-full p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
+      <PageBreadcrumb items={[{ label: "Clientes", href: "/clientes" }]} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">

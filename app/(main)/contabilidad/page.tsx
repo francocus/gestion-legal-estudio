@@ -17,6 +17,7 @@ import { HonorariosSection } from "@/components/contabilidad/honorarios-section"
 import { CreditosSection } from "@/components/contabilidad/creditos-section";
 import { RubrosSection } from "@/components/contabilidad/rubros-section";
 import { matchesCategory } from "@/lib/accounting-categories";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const dynamic = "force-dynamic";
 
@@ -215,6 +216,7 @@ export default async function ContabilidadPage() {
 
   return (
     <div className="flex-1 w-full p-4 md:p-8 space-y-6">
+      <PageBreadcrumb items={[{ label: "Contabilidad", href: "/contabilidad" }]} />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Resumen contable</h2>

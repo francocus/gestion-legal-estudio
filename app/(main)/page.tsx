@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { AreaFilter } from "@/components/area-filter";
 import { Button } from "@/components/ui/button";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 import { 
   Users, CalendarDays, CheckCircle2, Phone,
@@ -102,11 +103,19 @@ export default async function Home({ searchParams }: PageProps) {
   return (
     <div className="flex-1 w-full p-4 md:p-6 lg:p-8 space-y-5 max-w-[1600px] mx-auto">
 
+      <PageBreadcrumb items={[{ label: "Inicio" }]} />
+
       {/* ══════════════════════════════════════════════════════
           BARRA COMPACTA - reemplaza las 4 tarjetas KPI
           ══════════════════════════════════════════════════════ */}
       <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 py-3 shadow-sm text-sm">
-        
+
+        <div className="flex items-center gap-2 pr-4 border-r border-slate-200 dark:border-slate-700">
+          <CalendarDays className="h-4 w-4 text-slate-400 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400">Hoy</span>
+          <span className="font-bold text-slate-900 dark:text-white">{now.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}</span>
+        </div>
+
         <div className="flex items-center gap-2 pr-4 border-r border-slate-200 dark:border-slate-700">
           <Users className="h-4 w-4 text-blue-500 shrink-0" />
           <span className="text-slate-500 dark:text-slate-400">Clientes</span>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateObligationDialog } from "@/components/create-obligation-dialog";
 import { deleteObligation, updateObligationStatus } from "@/lib/actions/obligations";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,7 @@ export default async function ObligacionesPage() {
 
   return (
     <div className="flex-1 w-full p-4 md:p-8 space-y-6">
+      <PageBreadcrumb items={[{ label: "Obligaciones", href: "/obligaciones" }]} />
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Obligaciones</h2>

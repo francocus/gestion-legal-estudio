@@ -25,7 +25,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* Solo renderizamos los hijos. La Navbar y el Footer se inyectan más abajo */}
+            {/* Solo renderizamos los hijos. El sidebar y la topbar se inyectan en el layout de (main) */}
             {children}
           </ThemeProvider>
       </body>

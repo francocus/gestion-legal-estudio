@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { BibliotecaPanel } from "@/components/biblioteca-panel";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { Scale, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export default async function BibliotecaPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <PageBreadcrumb items={[{ label: "Biblioteca", href: "/biblioteca" }]} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3 dark:text-white">

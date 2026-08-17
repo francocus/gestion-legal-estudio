@@ -48,6 +48,10 @@ Esto existe para poder testear la lógica de negocio sin levantar una base de da
 
 `auth.config.ts` define el `authorized` callback (redirects según sesión) y se usa tanto en `auth.ts` (NextAuth completo, server) como en `proxy.ts` (boundary de red, corre en Node runtime en Next 16). No dupliques lógica de autorización fuera de estos dos archivos.
 
+### Navegación / shell de UI
+
+El shell usa un **sidebar izquierdo colapsable** (componente `sidebar` de shadcn/ui, `npx shadcn@latest add sidebar`), no un navbar horizontal con todos los links. Es el patrón estándar en sistemas de gestión de estudios jurídicos y el que corresponde a un dashboard con 6+ secciones. La barra superior (`topbar`) es liviana: trigger del sidebar, búsqueda global, tema, menú de usuario — nada de navegación ahí. Si agregás una sección nueva al sistema, va como item del sidebar, no como botón nuevo en la barra superior.
+
 ## Cosas conocidas que hay que arreglar (ver PROMPT-OPENCODE.md para el orden de trabajo)
 
 - Restos de desarrollo: comentarios de debug en español dentro de código, un componente (`ia-comparator-demo.tsx`) que quedó sin usar, y `fix-admin.mjs` con una contraseña hardcodeada en la raíz del repo.

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { UserPlus, Trash2, Shield, User as UserIcon, Clock3, KeyRound, PauseCircle, PlayCircle } from "lucide-react";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 function getRoleLabel(role: string) {
   return role === "ADMIN" ? "Administrador" : "Usuario";
@@ -83,6 +84,7 @@ export default async function TeamPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <PageBreadcrumb items={[{ label: "Equipo", href: "/team" }]} />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Gestion de equipo</h1>
       </div>

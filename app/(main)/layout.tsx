@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Topbar } from "@/components/topbar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function MainLayout({
   children,
@@ -34,15 +35,15 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* 5. Le pasamos el usuario a la Navbar para que filtre botones (ej: Panel Admin) */}
-      <Navbar user={user} />
-      
-      <main className="flex-1">
-        {children}
-      </main>
+    <SidebarProvider>
+      {/* 5. Le pasamos el usuario al sidebar para que filtre items (ej: Equipo solo para admin) */}
+      <AppSidebar user={user} />
 
-      <Footer />
-    </div>
+      <SidebarInset>
+        <Topbar user={user} />
+
+        <main className="flex-1">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

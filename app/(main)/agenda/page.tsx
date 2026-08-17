@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { AgendaPanel } from "@/components/agenda-panel";
 import { CalendarView } from "@/components/calendar-view";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { AlertTriangle, CalendarDays, Clock3, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function AgendaPage() {
 
   return (
     <div className="w-full p-6 space-y-6 max-w-[1600px] mx-auto">
+      <PageBreadcrumb items={[{ label: "Agenda", href: "/agenda" }]} />
       <div className="flex flex-col gap-4 border-b pb-6 dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-blue-600 p-2 text-white shadow-sm">
