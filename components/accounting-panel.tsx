@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CreateEntryDialog } from "@/components/create-entry-dialog";
 import { EditEntryDialog } from "@/components/edit-entry-dialog";
+import { AccountingCategory, matchesCategory } from "@/lib/accounting-categories";
 import {
   TrendingUp,
   TrendingDown,
@@ -61,8 +62,6 @@ interface PieDataPoint {
 
 type TooltipValue = number | string | readonly (number | string)[] | undefined;
 
-type CategoryKey = "TODOS" | "HONORARIOS" | "ALQUILERES_OBRAS" | "PRESTAMOS";
-
 const CONCEPTOS = [
   "Honorarios",
   "Adelanto de gastos",
@@ -77,35 +76,6 @@ const CONCEPTOS = [
 ];
 
 const COLORES_TORTA = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899"];
-
-function normalizeConcept(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-}
-
-function matchesCategory(concept: string, category: CategoryKey) {
-  const normalized = normalizeConcept(concept);
-
-  if (category === "TODOS") return true;
-  if (category === "HONORARIOS") return normalized.includes("HONORARIO");
-  if (category === "ALQUILERES_OBRAS") {
-    return (
-      normalized.includes("ALQUILER") ||
-      normalized.includes("OBRA") ||
-      normalized.includes("EXPENSA") ||
-      normalized.includes("INMOBILI")
-    );
-  }
-  if (category === "PRESTAMOS") {
-    return (
-      normalized.includes("PRESTAMO") ||
-      normalized.includes("MUTUO") ||
-      normalized.includes("CREDITO") ||
-      normalized.includes("COBRANZA")
-    );
-  }
-
-  return true;
-}
 
 export function AccountingPanel({
   initialEntries,
@@ -122,7 +92,7 @@ export function AccountingPanel({
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<CategoryKey>("TODOS");
+  const [activeCategory, setActiveCategory] = useState<AccountingCategory>("TODOS");
   const [form, setForm] = useState({
     date: new Date().toISOString().split("T")[0],
     description: "",

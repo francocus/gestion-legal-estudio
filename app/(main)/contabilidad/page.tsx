@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -9,22 +8,17 @@ import {
   Briefcase,
   Building2,
   CircleDollarSign,
-  ReceiptText,
-  ExternalLink,
-  CalendarClock,
-  BellRing,
 } from "lucide-react";
 import { CashFlowChart } from "./cash-flow-chart";
 import { CreateEntryDialog } from "@/components/create-entry-dialog";
 import { AccountingPanel } from "@/components/accounting-panel";
-import { HonorariosActions } from "@/components/honorarios-actions";
-import { PrestamosActions } from "@/components/prestamos-actions";
+import { TurnosSenasSection } from "@/components/contabilidad/turnos-senas-section";
+import { HonorariosSection } from "@/components/contabilidad/honorarios-section";
+import { CreditosSection } from "@/components/contabilidad/creditos-section";
+import { RubrosSection } from "@/components/contabilidad/rubros-section";
+import { matchesCategory } from "@/lib/accounting-categories";
 
 export const dynamic = "force-dynamic";
-
-function normalizeConcept(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
-}
 
 function getUtcMonthKey(dateValue: Date) {
   const date = new Date(dateValue);
@@ -36,27 +30,6 @@ function getUtcMonthLabelFromKey(key: string) {
   return new Date(Date.UTC(year, month - 1, 1))
     .toLocaleDateString("es-AR", { month: "short", timeZone: "UTC" })
     .toUpperCase();
-}
-
-function matchesCategory(concept: string, category: "HONORARIOS" | "ALQUILERES_OBRAS" | "PRESTAMOS") {
-  const normalized = normalizeConcept(concept);
-
-  if (category === "HONORARIOS") return normalized.includes("HONORARIO");
-  if (category === "ALQUILERES_OBRAS") {
-    return (
-      normalized.includes("ALQUILER") ||
-      normalized.includes("OBRA") ||
-      normalized.includes("EXPENSA") ||
-      normalized.includes("INMOBILI")
-    );
-  }
-
-  return (
-    normalized.includes("PRESTAMO") ||
-    normalized.includes("MUTUO") ||
-    normalized.includes("CREDITO") ||
-    normalized.includes("COBRANZA")
-  );
 }
 
 export default async function ContabilidadPage() {
@@ -87,9 +60,10 @@ export default async function ContabilidadPage() {
     },
   });
 
-  const totalIngresos = entries.reduce((acc, curr) => acc + (curr.haber || 0), 0);
-  const totalGastos = entries.reduce((acc, curr) => acc + (curr.debe || 0), 0);
-  const balanceTotal = totalIngresos - totalGastos;
+  const balanceTotal = entries.reduce(
+    (acc, curr) => acc + (curr.haber || 0) - (curr.debe || 0),
+    0
+  );
 
   const now = new Date();
   const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -308,441 +282,30 @@ export default async function ContabilidadPage() {
         </CardContent>
       </Card>
 
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Turnos y señas</h3>
-          <p className="text-sm text-slate-500">
-            Seguimiento operativo de anticipos asociados a turnos del estudio.
-          </p>
-        </div>
+      <TurnosSenasSection
+        appointments={appointmentsWithDeposit}
+        pendingDepositAmount={pendingAppointmentDepositAmount}
+        paidDepositAmount={paidAppointmentDepositAmount}
+        todayCount={todayAppointmentsWithDeposit}
+      />
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-amber-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Señas pendientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">$ {pendingAppointmentDepositAmount.toLocaleString("es-AR")}</div>
-              <p className="text-xs text-slate-500 mt-1">{pendingAppointmentDeposits.length} turno(s) con anticipo pendiente</p>
-            </CardContent>
-          </Card>
+      <HonorariosSection
+        items={honorariosPorCaso}
+        pactados={honorariosPactados}
+        cobrados={honorariosCobrados}
+        pendientes={honorariosPendientes}
+        enRiesgo={honorariosEnRiesgo}
+      />
 
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-emerald-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Señas cobradas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">$ {paidAppointmentDepositAmount.toLocaleString("es-AR")}</div>
-              <p className="text-xs text-slate-500 mt-1">{paidAppointmentDeposits.length} turno(s) con anticipo registrado</p>
-            </CardContent>
-          </Card>
+      <CreditosSection
+        items={prestamosPorCaso}
+        entregados={prestamosEntregados}
+        recuperados={prestamosRecuperados}
+        pendientes={prestamosPendientes}
+        activos={prestamosActivos}
+      />
 
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-fuchsia-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Turnos con seña</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-fuchsia-600 dark:text-fuchsia-400">{appointmentsWithDeposit.length}</div>
-              <p className="text-xs text-slate-500 mt-1">Turnos con reserva o anticipo asociado</p>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-blue-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Turnos con seña hoy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{todayAppointmentsWithDeposit}</div>
-              <p className="text-xs text-slate-500 mt-1">Control inmediato del día</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="dark:bg-slate-900/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CalendarClock className="h-5 w-5 text-fuchsia-500" /> Señas por turno
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {appointmentsWithDeposit.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                No hay turnos con señas registradas todavia.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Turno</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Cliente</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Fecha</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Seña</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Estado</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {appointmentsWithDeposit.map((item) => (
-                      <tr key={item.id} className="bg-white dark:bg-slate-900">
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-slate-800 dark:text-slate-200">{item.title}</p>
-                          {item.case && (
-                            <p className="mt-1 text-xs text-slate-500">{item.case.caratula}</p>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
-                          {item.client ? `${item.client.lastName}, ${item.client.firstName}` : "Sin cliente"}
-                        </td>
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
-                          <div className="flex items-center gap-2">
-                            <BellRing className="h-3.5 w-3.5 text-slate-400" />
-                            {item.date.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}
-                          </div>
-                        </td>
-                        <td className={`px-5 py-4 text-right font-mono ${item.depositPaid ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                          $ {(item.depositAmount || 0).toLocaleString("es-AR")}
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
-                            item.depositPaid
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                          }`}>
-                            {item.depositPaid ? "Cobrada" : "Pendiente"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-2">
-                            {item.client && (
-                              <Link
-                                href={`/client/${item.client.id}`}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/50"
-                              >
-                                Ver cliente
-                              </Link>
-                            )}
-                            {item.case && item.client && (
-                              <Link
-                                href={`/client/${item.client.id}/case/${item.case.id}`}
-                                className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-950/30"
-                              >
-                                <ExternalLink className="h-3 w-3" /> Abrir expediente
-                              </Link>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Honorarios</h3>
-          <p className="text-sm text-slate-500">
-            Estado economico por expediente.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-indigo-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Honorarios pactados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">$ {honorariosPactados.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-emerald-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Honorarios cobrados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">$ {honorariosCobrados.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-amber-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Pendiente de cobro</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">$ {honorariosPendientes.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-red-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Casos con baja cobranza</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{honorariosEnRiesgo}</div>
-              <p className="text-xs text-slate-500 mt-1">Expedientes con menos del 40% cobrado</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="dark:bg-slate-900/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ReceiptText className="h-5 w-5 text-indigo-500" /> Estado de honorarios por expediente
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {honorariosPorCaso.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                No hay expedientes con honorarios cargados todavia.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Expediente</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Cliente</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Area</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Pactado</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Cobrado</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Pendiente</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Invertido</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Avance</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {honorariosPorCaso.map((item) => (
-                      <tr key={item.id} className="bg-white dark:bg-slate-900">
-                        <td className="px-5 py-4">
-                          <p className="font-medium text-slate-800 dark:text-slate-200">{item.caratula}</p>
-                          <p className="text-xs text-slate-500 uppercase mt-1">
-                            {item.status === "ACTIVE" ? "En tramite" : item.status === "MEDIATION" ? "Mediacion" : "Archivado"}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{item.clientName}</td>
-                        <td className="px-5 py-4">
-                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {item.area}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right font-mono text-slate-700 dark:text-slate-200">$ {item.pactado.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400">$ {item.cobrado.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right font-mono text-amber-600 dark:text-amber-400">$ {item.pendiente.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right font-mono text-red-600 dark:text-red-400">$ {item.invertido.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 min-w-[180px]">
-                          <div className="space-y-1">
-                            <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${item.avance >= 70 ? "bg-emerald-500" : item.avance >= 40 ? "bg-amber-500" : "bg-red-500"}`}
-                                style={{ width: `${item.avance}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-slate-500">{item.avance.toFixed(0)}% cobrado</p>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-2">
-                            <Link
-                              href={`/client/${item.clientId}/case/${item.id}`}
-                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-950/30"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Abrir expediente
-                            </Link>
-                            <Link
-                              href={`/client/${item.clientId}`}
-                              className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/50"
-                            >
-                              Ver cliente
-                            </Link>
-                            <HonorariosActions
-                              caseId={item.id}
-                              clientId={item.clientId}
-                              caratula={item.caratula}
-                              clientName={item.clientName}
-                              totalFee={item.pactado}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Creditos / Cobranzas</h3>
-          <p className="text-sm text-slate-500">
-            Seguimiento de entregas de fondos, recuperos y saldos por expediente.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-amber-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Capital entregado</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">$ {prestamosEntregados.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-emerald-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Capital recuperado</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">$ {prestamosRecuperados.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-red-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Saldo pendiente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">$ {prestamosPendientes.toLocaleString("es-AR")}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-slate-900/50 shadow-sm border-l-4 border-l-blue-500">
-            <CardHeader className="space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">Casos activos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{prestamosActivos}</div>
-              <p className="text-xs text-slate-500 mt-1">Con saldo pendiente de recuperacion</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="dark:bg-slate-900/50 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CircleDollarSign className="h-5 w-5 text-blue-500" /> Estado de creditos por expediente
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {prestamosPorCaso.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
-                No hay creditos o cobranzas registrados todavia.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Expediente</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Cliente</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Area</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Entregado</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Recuperado</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Saldo</th>
-                      <th className="px-5 py-3 text-right text-[10px] uppercase tracking-widest text-slate-500">Movimientos</th>
-                      <th className="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-500">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {prestamosPorCaso.map((item) => (
-                      <tr key={item.id} className="bg-white dark:bg-slate-900">
-                        <td className="px-5 py-4 font-medium text-slate-800 dark:text-slate-200">{item.caratula}</td>
-                        <td className="px-5 py-4 text-slate-600 dark:text-slate-300">{item.clientName}</td>
-                        <td className="px-5 py-4">
-                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {item.area}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 text-right font-mono text-amber-600 dark:text-amber-400">$ {item.entregado.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right font-mono text-emerald-600 dark:text-emerald-400">$ {item.recuperado.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right font-mono text-red-600 dark:text-red-400">$ {item.saldo.toLocaleString("es-AR")}</td>
-                        <td className="px-5 py-4 text-right text-slate-600 dark:text-slate-300">{item.movimientos}</td>
-                        <td className="px-5 py-4">
-                          <div className="flex flex-col gap-2">
-                            <Link
-                              href={`/client/${item.clientId}/case/${item.id}`}
-                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 dark:border-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-950/30"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Abrir expediente
-                            </Link>
-                            <Link
-                              href={`/client/${item.clientId}`}
-                              className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/50"
-                            >
-                              Ver cliente
-                            </Link>
-                            <PrestamosActions
-                              caseId={item.id}
-                              clientId={item.clientId}
-                              caratula={item.caratula}
-                              clientName={item.clientName}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">Rubros contables</h3>
-          <p className="text-sm text-slate-500">
-            Resumen por rubro.
-          </p>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-3">
-          {categorySummary.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Card key={item.key} className="dark:bg-slate-900/50 shadow-sm border border-slate-200 dark:border-slate-800">
-                <CardHeader className="space-y-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-blue-500" /> {item.title}
-                  </CardTitle>
-                  <p className="text-sm text-slate-500">{item.description}</p>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
-                      <p className="text-[10px] uppercase text-slate-500 font-bold">Ingresos</p>
-                      <p className="font-bold text-emerald-600">$ {item.ingresos.toLocaleString("es-AR")}</p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
-                      <p className="text-[10px] uppercase text-slate-500 font-bold">Egresos</p>
-                      <p className="font-bold text-red-600">$ {item.egresos.toLocaleString("es-AR")}</p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
-                      <p className="text-[10px] uppercase text-slate-500 font-bold">Saldo</p>
-                      <p className={`font-bold ${item.saldo >= 0 ? "text-blue-600" : "text-red-600"}`}>
-                        $ {item.saldo.toLocaleString("es-AR")}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {item.count} movimientos cargados en este rubro.
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
+      <RubrosSection items={categorySummary} />
 
       <AccountingPanel
         initialEntries={entries}
