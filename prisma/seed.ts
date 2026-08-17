@@ -52,6 +52,7 @@ async function seedUsers() {
   const password = await bcrypt.hash("demo1234", 10);
 
   const users = [
+    { email: "admin@legal.com", name: "Admin Estudio", role: "ADMIN" },
     { email: "socio@demo.local", name: "Socio Principal", role: "ADMIN" },
     { email: "abogada@demo.local", name: "Abogada Senior", role: "USER" },
     { email: "jr@demo.local", name: "Abogado Junior", role: "USER" },
