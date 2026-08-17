@@ -32,9 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# archivos subidos por usuarios (storage local efímero, solo demo)
+/public/uploads/
 
 # vercel
 .vercel
+
+# herramientas y skills de agente (no son codigo del proyecto)
+.agents/
+skills-lock.json
 
 # typescript
 *.tsbuildinfo
