@@ -2,7 +2,7 @@
 
 Plataforma full-stack para la administración integral de estudios jurídicos, con enfoque internacional y adaptable a distintas jurisdicciones (Argentina y Paraguay), materias y formas de trabajo.
 
-> **Demo en vivo:** [gestion-estudio-juridico.vercel.app](https://gestion-estudio-juridico.vercel.app/)
+> **Demo en vivo:** [gestionlegal.studio](https://www.gestionlegal.studio/)
 
 ![Dashboard Principal](public/screenshots/dashboard.png)
 
