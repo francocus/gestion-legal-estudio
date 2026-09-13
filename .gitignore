@@ -46,6 +46,7 @@ yarn-error.log*
 
 # herramientas y skills de agente (no son codigo del proyecto)
 .agents/
+AGENTS.md
 skills-lock.json
 
 # typescript
