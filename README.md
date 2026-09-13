@@ -1,4 +1,4 @@
-# LegalManager — Sistema de Gestión Jurídica Integral
+# Sistema de Gestión Jurídica Integral
 
 Plataforma full-stack para la administración integral de estudios jurídicos, con enfoque internacional y adaptable a distintas jurisdicciones (Argentina y Paraguay), materias y formas de trabajo.
 
