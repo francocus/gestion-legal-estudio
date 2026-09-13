@@ -186,6 +186,15 @@ async function seedLegalSources() {
 }
 
 async function recreateClientCases(clientId: string, cases: SeedCase[]) {
+  const caseIds = await prisma.case.findMany({
+    where: { clientId },
+    select: { id: true },
+  });
+
+  await prisma.accountEntry.deleteMany({
+    where: { caseId: { in: caseIds.map((item) => item.id) } },
+  });
+
   await prisma.case.deleteMany({ where: { clientId } });
 
   const legalSources = await prisma.legalSource.findMany({
@@ -331,12 +340,12 @@ async function seedClientsAndCases() {
             {
               title: "Demanda presentada",
               description: "Se promovio demanda por despido, multas y diferencias salariales.",
-              dateOffsetDays: -18,
+              dateOffsetDays: -45,
             },
             {
               title: "Traslado contestado",
               description: "La demandada nego la jornada denunciada y ofrecio testigos.",
-              dateOffsetDays: -6,
+              dateOffsetDays: -20,
             },
           ],
           transactions: [
@@ -344,13 +353,13 @@ async function seedClientsAndCases() {
               description: "Adelanto de honorarios",
               amount: 250000,
               type: "INCOME",
-              dateOffsetDays: -20,
+              dateOffsetDays: -40,
             },
             {
               description: "Pago de bono de derecho fijo",
               amount: 18000,
               type: "EXPENSE",
-              dateOffsetDays: -17,
+              dateOffsetDays: -35,
             },
           ],
           entries: [
@@ -359,28 +368,34 @@ async function seedClientsAndCases() {
               concept: "Honorarios",
               debe: 0,
               haber: 250000,
-              dateOffsetDays: -20,
+              dateOffsetDays: -40,
             },
             {
               description: "Pago de bono de derecho fijo",
               concept: "Gastos judiciales",
               debe: 18000,
               haber: 0,
-              dateOffsetDays: -17,
+              dateOffsetDays: -35,
             },
           ],
           events: [
             {
-              title: "Audiencia preliminar",
-              description: "Revisar prueba documental y testigos.",
-              type: EventType.HEARING,
-              dateOffsetDays: 7,
-            },
-            {
               title: "Vence traslado de documental",
               description: "Subir recibos y registros horarios digitalizados.",
               type: EventType.DEADLINE,
-              dateOffsetDays: 3,
+              dateOffsetDays: 30,
+            },
+            {
+              title: "Audiencia preliminar",
+              description: "Revisar prueba documental y testigos.",
+              type: EventType.HEARING,
+              dateOffsetDays: 30,
+            },
+            {
+              title: "Audiencia de prueba",
+              description: "Ofrecer prueba pericial contable y testigos.",
+              type: EventType.HEARING,
+              dateOffsetDays: 90,
             },
           ],
           sourceTitles: [
@@ -411,7 +426,7 @@ async function seedClientsAndCases() {
             {
               title: "Se envio propuesta inicial",
               description: "Oferta remitida a la contraparte con plan de cuotas y clausula penal.",
-              dateOffsetDays: -4,
+              dateOffsetDays: -12,
             },
           ],
           transactions: [
@@ -419,7 +434,7 @@ async function seedClientsAndCases() {
               description: "Consulta y armado de propuesta",
               amount: 80000,
               type: "INCOME",
-              dateOffsetDays: -10,
+              dateOffsetDays: -15,
             },
           ],
           entries: [
@@ -428,7 +443,7 @@ async function seedClientsAndCases() {
               concept: "Honorarios",
               debe: 0,
               haber: 80000,
-              dateOffsetDays: -10,
+              dateOffsetDays: -15,
             },
           ],
           events: [
@@ -436,7 +451,7 @@ async function seedClientsAndCases() {
               title: "Seguimiento de propuesta",
               description: "Llamar a la contraparte y revisar respuesta.",
               type: EventType.MEETING,
-              dateOffsetDays: 2,
+              dateOffsetDays: 15,
             },
           ],
           sourceTitles: [
@@ -484,12 +499,12 @@ async function seedClientsAndCases() {
             {
               title: "Mediacion frustrada",
               description: "No hubo acuerdo. Se prepara demanda principal.",
-              dateOffsetDays: -14,
+              dateOffsetDays: -30,
             },
             {
               title: "Documentacion del contrato incorporada",
               description: "Se agregan facturas, correos y carta documento.",
-              dateOffsetDays: -8,
+              dateOffsetDays: -18,
             },
           ],
           transactions: [
@@ -497,13 +512,13 @@ async function seedClientsAndCases() {
               description: "Provision inicial de fondos",
               amount: 350000,
               type: "INCOME",
-              dateOffsetDays: -15,
+              dateOffsetDays: -25,
             },
             {
               description: "Traduccion de documentacion",
               amount: 45000,
               type: "EXPENSE",
-              dateOffsetDays: -9,
+              dateOffsetDays: -14,
             },
           ],
           entries: [
@@ -512,28 +527,34 @@ async function seedClientsAndCases() {
               concept: "Caja",
               debe: 0,
               haber: 350000,
-              dateOffsetDays: -15,
+              dateOffsetDays: -25,
             },
             {
               description: "Gasto por traducciones",
               concept: "Pericias y traducciones",
               debe: 45000,
               haber: 0,
-              dateOffsetDays: -9,
+              dateOffsetDays: -14,
             },
           ],
           events: [
             {
-              title: "Presentacion de demanda",
-              description: "Control final de documental y poder.",
+              title: "Vencimiento de traslado",
+              description: "Contestar traslado de excepciones y ofrecer prueba.",
               type: EventType.DEADLINE,
-              dateOffsetDays: 4,
+              dateOffsetDays: 25,
             },
             {
               title: "Reunion con cliente",
               description: "Definir monto final reclamado y estrategia probatoria.",
               type: EventType.MEETING,
-              dateOffsetDays: 1,
+              dateOffsetDays: 10,
+            },
+            {
+              title: "Presentacion de demanda",
+              description: "Control final de documental y poder.",
+              type: EventType.DEADLINE,
+              dateOffsetDays: 20,
             },
           ],
           sourceTitles: [
@@ -589,23 +610,212 @@ async function seedGeneralAgenda() {
     data: [
       {
         title: "Control semanal del estudio",
-        date: daysFromNow(1),
+        date: daysFromNow(5),
         type: EventType.PERSONAL,
         description: "Revisar agenda completa, caja y prioridades de la semana.",
       },
       {
         title: "Chequeo medico anual",
-        date: daysFromNow(12),
+        date: daysFromNow(45),
         type: EventType.MEDICAL,
         description: "Turno personal para testear eventos no juridicos.",
       },
       {
         title: "Reunion comercial con potencial cliente",
-        date: daysFromNow(5),
+        date: daysFromNow(60),
         type: EventType.SOCIAL,
         description: "Presentacion del estudio y propuesta de servicio integral.",
       },
     ],
+  });
+}
+
+async function seedTurnos() {
+  const titles = [
+    "Consulta de seguimiento - Suarez",
+    "Turno de asesoramiento - Benitez",
+    "Audiencia de conciliacion - Suarez",
+  ];
+
+  await prisma.event.deleteMany({
+    where: { type: EventType.APPOINTMENT, title: { in: titles } },
+  });
+
+  const suarez = await prisma.client.findFirst({ where: { dni: "30111222" } });
+  const benitez = await prisma.client.findFirst({ where: { dni: "28444555" } });
+
+  const laboralCase = await prisma.case.findFirst({
+    where: { code: "LAB-2026-001" },
+    select: { id: true },
+  });
+  const acuerdoCase = await prisma.case.findFirst({
+    where: { code: "AC-2026-014" },
+    select: { id: true },
+  });
+  const civilCase = await prisma.case.findFirst({
+    where: { code: "CIV-PY-002" },
+    select: { id: true },
+  });
+
+  if (!suarez || !benitez || !laboralCase || !acuerdoCase || !civilCase) {
+    console.warn("Seed de turnos omitido: faltan clientes o expedientes demo.");
+    return;
+  }
+
+  await prisma.event.createMany({
+    data: [
+      {
+        title: "Consulta de seguimiento - Suarez",
+        description: "Turno vencido para repasar el estado del reclamo laboral.",
+        type: EventType.APPOINTMENT,
+        date: daysFromNow(-2),
+        clientId: suarez.id,
+        caseId: laboralCase.id,
+        appointmentStatus: "PENDING",
+        appointmentMode: "IN_PERSON",
+        durationMinutes: 45,
+      },
+      {
+        title: "Turno de asesoramiento - Benitez",
+        description: "Atencion de hoy para definir estrategia y monto reclamado.",
+        type: EventType.APPOINTMENT,
+        date: daysFromNow(0),
+        clientId: benitez.id,
+        caseId: civilCase.id,
+        appointmentStatus: "CONFIRMED",
+        appointmentMode: "VIDEO",
+        durationMinutes: 30,
+        depositAmount: 50000,
+        depositPaid: true,
+      },
+      {
+        title: "Audiencia de conciliacion - Suarez",
+        description: "Turno lejano para intentar acuerdo extrajudicial.",
+        type: EventType.APPOINTMENT,
+        date: daysFromNow(12),
+        clientId: suarez.id,
+        caseId: acuerdoCase.id,
+        appointmentStatus: "PENDING",
+        appointmentMode: "PHONE",
+        durationMinutes: 60,
+      },
+    ],
+  });
+}
+
+async function seedObligations() {
+  const concepts = [
+    "IVA mensual - AFIP",
+    "Ingresos Brutos - Santa Fe",
+    "Tasa de justicia - Suarez",
+    "Impuesto Inmobiliario - Asuncion",
+    "Canon anual de matriculacion",
+  ];
+
+  await prisma.obligation.deleteMany({
+    where: { concept: { in: concepts } },
+  });
+
+  await prisma.accountEntry.deleteMany({
+    where: { description: "Pago de canon anual de matriculacion" },
+  });
+
+  const suarez = await prisma.client.findFirst({ where: { dni: "30111222" } });
+  const benitez = await prisma.client.findFirst({ where: { dni: "28444555" } });
+
+  if (!suarez || !benitez) {
+    console.warn("Seed de obligaciones omitido: no se encontraron los clientes demo.");
+    return;
+  }
+
+  const laboralCase = await prisma.case.findFirst({
+    where: { code: "LAB-2026-001" },
+    select: { id: true },
+  });
+
+  await prisma.obligation.create({
+    data: {
+      clientId: suarez.id,
+      country: "Argentina",
+      organism: "AFIP",
+      category: "TAX",
+      concept: "IVA mensual - AFIP",
+      period: "07/2026",
+      dueDate: daysFromNow(-5),
+      amount: 452000,
+      status: "PENDING",
+      notes: "Vencimiento del periodo anterior; requiere pago y presentacion.",
+    },
+  });
+
+  await prisma.obligation.create({
+    data: {
+      clientId: suarez.id,
+      country: "Argentina",
+      organism: "APIs Santa Fe",
+      category: "TAX",
+      concept: "Ingresos Brutos - Santa Fe",
+      period: "08/2026",
+      dueDate: daysFromNow(3),
+      amount: 128000,
+      status: "PENDING",
+    },
+  });
+
+  await prisma.obligation.create({
+    data: {
+      clientId: suarez.id,
+      caseId: laboralCase?.id ?? null,
+      country: "Argentina",
+      organism: "Poder Judicial de Santa Fe",
+      category: "FEE",
+      concept: "Tasa de justicia - Suarez",
+      period: "08/2026",
+      dueDate: daysFromNow(20),
+      amount: 40000,
+      status: "PENDING",
+      notes: "Tasa de justicia del expediente LAB-2026-001.",
+    },
+  });
+
+  await prisma.obligation.create({
+    data: {
+      clientId: benitez.id,
+      country: "Paraguay",
+      organism: "Municipalidad de Asuncion",
+      category: "TAX",
+      concept: "Impuesto Inmobiliario - Asuncion",
+      period: "2026",
+      dueDate: daysFromNow(35),
+      amount: 850000,
+      status: "PENDING",
+    },
+  });
+
+  const canon = await prisma.obligation.create({
+    data: {
+      clientId: suarez.id,
+      country: "Argentina",
+      organism: "Colegio de Abogados",
+      category: "FEE",
+      concept: "Canon anual de matriculacion",
+      period: "2026",
+      dueDate: daysFromNow(-15),
+      amount: 300000,
+      status: "PAID",
+      notes: "Pago registrado con asiento contable vinculado.",
+    },
+  });
+
+  await prisma.accountEntry.create({
+    data: {
+      description: "Pago de canon anual de matriculacion",
+      concept: "Gastos de matriculacion",
+      debe: 300000,
+      haber: 0,
+      date: daysFromNow(-15),
+      obligationRecord: { connect: { id: canon.id } },
+    },
   });
 }
 
@@ -615,6 +825,8 @@ async function main() {
   await seedUsers();
   await seedLegalSources();
   await seedClientsAndCases();
+  await seedTurnos();
+  await seedObligations();
   await seedGeneralAgenda();
 
   console.log("Seed completo. Ya podes probar usuarios, clientes, expedientes, agenda, caja, contabilidad, notas y biblioteca.");
